@@ -1,22 +1,16 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Worker, OvertimeEntry, WorkerSummary } from "@/types";
-import { WorkerForm } from "@/components/WorkerForm";
 import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Plus } from "lucide-react";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [entries, setEntries] = useState<OvertimeEntry[]>([]);
-
-  const handleAddWorker = (workerData: Omit<Worker, "id">) => {
-    const newWorker: Worker = {
-      ...workerData,
-      id: crypto.randomUUID(),
-    };
-    setWorkers([...workers, newWorker]);
-  };
 
   const handleAddEntry = (entryData: Omit<OvertimeEntry, "id">) => {
     setEntries([...entries, entryData]);
@@ -28,8 +22,8 @@ const Index = () => {
       const totalCategoryA = workerEntries.reduce((sum, entry) => sum + entry.categoryA, 0);
       const totalCategoryC = workerEntries.reduce((sum, entry) => sum + entry.categoryC, 0);
       const transportationDays = workerEntries.filter((entry) => entry.transportation).length;
-      // Placeholder rate of 10 per day - this would come from area configuration
-      const transportationCost = transportationDays * 10;
+      const area = worker.defaultArea;
+      const transportationCost = transportationDays * (Number(area) || 0);
       
       return {
         workerId: worker.id,
@@ -38,7 +32,6 @@ const Index = () => {
         totalCategoryC,
         transportationDays,
         transportationCost,
-        totalAmount: (totalCategoryA * 1.5 + totalCategoryC * 2) * 100 + transportationCost, // Example calculation
       };
     });
   };
@@ -55,8 +48,16 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <WorkerForm onSubmit={handleAddWorker} />
+        <div className="flex justify-end">
+          <Button
+            onClick={() => navigate("/add-worker")}
+            className="animate-fadeIn"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add New Worker
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8">
           <OvertimeEntryComponent workers={workers} onSubmit={handleAddEntry} />
         </div>
 
@@ -80,7 +81,7 @@ const Index = () => {
                       Transport Days
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Amount
+                      Transport Amount
                     </th>
                   </tr>
                 </thead>
@@ -100,7 +101,7 @@ const Index = () => {
                         {summary.transportationDays}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${summary.totalAmount.toFixed(2)}
+                        ₵{summary.transportationCost.toFixed(2)}
                       </td>
                     </tr>
                   ))}
