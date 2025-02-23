@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Worker } from "@/types";
+import { Worker, Grade } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,17 @@ interface WorkerFormProps {
 }
 
 export function WorkerForm({ onSubmit }: WorkerFormProps) {
-  const [name, setName] = useState("");
-  const [defaultArea, setDefaultArea] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    staffId: "",
+    grade: "General Worker" as Grade,
+    defaultArea: "",
+    transportRequired: true,
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !defaultArea) {
+    if (!formData.name || !formData.staffId || !formData.defaultArea) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -25,9 +30,14 @@ export function WorkerForm({ onSubmit }: WorkerFormProps) {
       });
       return;
     }
-    onSubmit({ name, defaultArea });
-    setName("");
-    setDefaultArea("");
+    onSubmit(formData);
+    setFormData({
+      name: "",
+      staffId: "",
+      grade: "General Worker",
+      defaultArea: "",
+      transportRequired: true,
+    });
     toast({
       title: "Success",
       description: "Worker added successfully",
@@ -42,9 +52,19 @@ export function WorkerForm({ onSubmit }: WorkerFormProps) {
           <Label htmlFor="name">Worker Name</Label>
           <Input
             id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="Enter worker name"
+            className="w-full"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="staffId">Staff ID</Label>
+          <Input
+            id="staffId"
+            value={formData.staffId}
+            onChange={(e) => setFormData(prev => ({ ...prev, staffId: e.target.value }))}
+            placeholder="Enter staff ID"
             className="w-full"
           />
         </div>
@@ -52,8 +72,8 @@ export function WorkerForm({ onSubmit }: WorkerFormProps) {
           <Label htmlFor="area">Default Area</Label>
           <Input
             id="area"
-            value={defaultArea}
-            onChange={(e) => setDefaultArea(e.target.value)}
+            value={formData.defaultArea}
+            onChange={(e) => setFormData(prev => ({ ...prev, defaultArea: e.target.value }))}
             placeholder="Enter default area"
             className="w-full"
           />

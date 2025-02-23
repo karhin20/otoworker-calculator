@@ -12,24 +12,39 @@ const Index = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [entries, setEntries] = useState<OvertimeEntry[]>([]);
 
-  const handleAddEntry = (entryData: Omit<OvertimeEntry, "id">) => {
+  const handleAddEntry = (entryData: OvertimeEntry) => {
     setEntries([...entries, entryData]);
   };
 
   const calculateSummary = (): WorkerSummary[] => {
     return workers.map((worker) => {
       const workerEntries = entries.filter((entry) => entry.workerId === worker.id);
-      const totalCategoryA = workerEntries.reduce((sum, entry) => sum + entry.categoryA, 0);
-      const totalCategoryC = workerEntries.reduce((sum, entry) => sum + entry.categoryC, 0);
+      const overtimeHours = workerEntries.reduce((sum, entry) => {
+        const [entryHour, entryMinute] = entry.entryTime.split(":").map(Number);
+        const [exitHour, exitMinute] = entry.exitTime.split(":").map(Number);
+        
+        let hours = exitHour - entryHour;
+        let minutes = exitMinute - entryMinute;
+        
+        if (minutes < 0) {
+          hours--;
+          minutes += 60;
+        }
+        
+        return sum + (hours + (minutes / 60));
+      }, 0);
+
+      const overtimeAmount = overtimeHours * 50; // Example rate
       const transportationDays = workerEntries.filter((entry) => entry.transportation).length;
-      const area = worker.defaultArea;
-      const transportationCost = transportationDays * (Number(area) || 0);
+      const transportationCost = transportationDays * (Number(worker.defaultArea) || 0);
       
       return {
         workerId: worker.id,
         name: worker.name,
-        totalCategoryA,
-        totalCategoryC,
+        staffId: worker.staffId,
+        grade: worker.grade,
+        overtimeHours,
+        overtimeAmount,
         transportationDays,
         transportationCost,
       };
@@ -72,10 +87,16 @@ const Index = () => {
                       Worker
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category A Hours
+                      Staff ID
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category C Hours
+                      Grade
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Overtime Hours
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Overtime Amount
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Transport Days
@@ -92,10 +113,16 @@ const Index = () => {
                         {summary.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {summary.totalCategoryA}
+                        {summary.staffId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {summary.totalCategoryC}
+                        {summary.grade}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {summary.overtimeHours.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ₵{summary.overtimeAmount.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {summary.transportationDays}
