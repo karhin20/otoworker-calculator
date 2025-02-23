@@ -51,16 +51,27 @@ export const AREAS: Area[] = [
 export interface OvertimeEntry {
   workerId: string;
   date: Date;
-  categoryA: number;
-  categoryC: number;
+  entryTime: string;
+  exitTime: string;
   transportation: boolean;
 }
 
 export interface WorkerSummary {
   workerId: string;
   name: string;
-  totalCategoryA: number;
-  totalCategoryC: number;
+  staffId: string;
+  grade: string;
+  overtimeHours: number;
+  overtimeAmount: number;
   transportationDays: number;
+  transportationCost: number;
+}
+
+export interface WorkerDetail {
+  date: Date;
+  entryTime: string;
+  exitTime: string;
+  overtimeHours: number;
+  transportation: boolean;
   transportationCost: number;
 }

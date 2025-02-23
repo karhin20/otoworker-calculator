@@ -14,19 +14,34 @@ import { toast } from "@/hooks/use-toast";
 
 interface OvertimeEntryProps {
   workers: Worker[];
-  onSubmit: (entry: Omit<OvertimeEntryType, "id">) => void;
+  onSubmit: (entry: OvertimeEntryType) => void;
 }
 
 export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
   const [selectedWorker, setSelectedWorker] = useState("");
   const [date, setDate] = useState<Date>();
-  const [categoryA, setCategoryA] = useState("");
-  const [categoryC, setCategoryC] = useState("");
+  const [entryTime, setEntryTime] = useState("");
+  const [exitTime, setExitTime] = useState("");
   const [transportation, setTransportation] = useState(false);
+
+  const calculateHours = (entry: string, exit: string): number => {
+    const [entryHour, entryMinute] = entry.split(":").map(Number);
+    const [exitHour, exitMinute] = exit.split(":").map(Number);
+    
+    let hours = exitHour - entryHour;
+    let minutes = exitMinute - entryMinute;
+    
+    if (minutes < 0) {
+      hours--;
+      minutes += 60;
+    }
+    
+    return hours + (minutes / 60);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedWorker || !date) {
+    if (!selectedWorker || !date || !entryTime || !exitTime) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -35,18 +50,20 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
       return;
     }
 
+    const selectedWorkerData = workers.find(w => w.id === selectedWorker);
+    
     onSubmit({
       workerId: selectedWorker,
       date,
-      categoryA: Number(categoryA) || 0,
-      categoryC: Number(categoryC) || 0,
+      entryTime,
+      exitTime,
       transportation,
     });
 
     setSelectedWorker("");
     setDate(undefined);
-    setCategoryA("");
-    setCategoryC("");
+    setEntryTime("");
+    setExitTime("");
     setTransportation(false);
 
     toast({
@@ -70,7 +87,7 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
             <option value="">Select a worker</option>
             {workers.map((worker) => (
               <option key={worker.id} value={worker.id}>
-                {worker.name}
+                {worker.name} - {worker.staffId} ({worker.grade})
               </option>
             ))}
           </select>
@@ -104,27 +121,21 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="categoryA">Category A Hours</Label>
+            <Label htmlFor="entryTime">Entry Time</Label>
             <Input
-              id="categoryA"
-              type="number"
-              value={categoryA}
-              onChange={(e) => setCategoryA(e.target.value)}
-              placeholder="Weekday hours"
-              min="0"
-              step="0.5"
+              id="entryTime"
+              type="time"
+              value={entryTime}
+              onChange={(e) => setEntryTime(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="categoryC">Category C Hours</Label>
+            <Label htmlFor="exitTime">Exit Time</Label>
             <Input
-              id="categoryC"
-              type="number"
-              value={categoryC}
-              onChange={(e) => setCategoryC(e.target.value)}
-              placeholder="Weekend hours"
-              min="0"
-              step="0.5"
+              id="exitTime"
+              type="time"
+              value={exitTime}
+              onChange={(e) => setExitTime(e.target.value)}
             />
           </div>
         </div>
