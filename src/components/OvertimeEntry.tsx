@@ -1,14 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Worker, OvertimeEntry as OvertimeEntryType } from "@/types";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, isWeekend } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -20,28 +20,24 @@ interface OvertimeEntryProps {
 export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
   const [selectedWorker, setSelectedWorker] = useState("");
   const [date, setDate] = useState<Date>();
-  const [entryTime, setEntryTime] = useState("");
-  const [exitTime, setExitTime] = useState("");
+  const [entryHour, setEntryHour] = useState("");
+  const [exitHour, setExitHour] = useState("");
   const [transportation, setTransportation] = useState(false);
+  const [category, setCategory] = useState<"A" | "C">("A");
 
-  const calculateHours = (entry: string, exit: string): number => {
-    const [entryHour, entryMinute] = entry.split(":").map(Number);
-    const [exitHour, exitMinute] = exit.split(":").map(Number);
-    
-    let hours = exitHour - entryHour;
-    let minutes = exitMinute - entryMinute;
-    
-    if (minutes < 0) {
-      hours--;
-      minutes += 60;
+  const hours = Array.from({ length: 24 }, (_, i) => 
+    i.toString().padStart(2, '0') + ":00"
+  );
+
+  useEffect(() => {
+    if (date) {
+      setCategory(isWeekend(date) ? "C" : "A");
     }
-    
-    return hours + (minutes / 60);
-  };
+  }, [date]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedWorker || !date || !entryTime || !exitTime) {
+    if (!selectedWorker || !date || !entryHour || !exitHour) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -50,21 +46,21 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
       return;
     }
 
-    const selectedWorkerData = workers.find(w => w.id === selectedWorker);
-    
     onSubmit({
       workerId: selectedWorker,
       date,
-      entryTime,
-      exitTime,
+      entryTime: entryHour,
+      exitTime: exitHour,
       transportation,
+      category,
     });
 
     setSelectedWorker("");
     setDate(undefined);
-    setEntryTime("");
-    setExitTime("");
+    setEntryHour("");
+    setExitHour("");
     setTransportation(false);
+    setCategory("A");
 
     toast({
       title: "Success",
@@ -122,22 +118,47 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="entryTime">Entry Time</Label>
-            <Input
-              id="entryTime"
-              type="time"
-              value={entryTime}
-              onChange={(e) => setEntryTime(e.target.value)}
-            />
+            <Select value={entryHour} onValueChange={setEntryHour}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select entry time" />
+              </SelectTrigger>
+              <SelectContent>
+                {hours.map((hour) => (
+                  <SelectItem key={hour} value={hour}>
+                    {hour}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="exitTime">Exit Time</Label>
-            <Input
-              id="exitTime"
-              type="time"
-              value={exitTime}
-              onChange={(e) => setExitTime(e.target.value)}
-            />
+            <Select value={exitHour} onValueChange={setExitHour}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select exit time" />
+              </SelectTrigger>
+              <SelectContent>
+                {hours.map((hour) => (
+                  <SelectItem key={hour} value={hour}>
+                    {hour}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="category">Category</Label>
+          <Select value={category} onValueChange={(value: "A" | "C") => setCategory(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="A">Category A</SelectItem>
+              <SelectItem value="C">Category C</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center space-x-2">

@@ -1,4 +1,3 @@
-
 export interface Worker {
   id: string;
   name: string;
@@ -54,6 +53,7 @@ export interface OvertimeEntry {
   entryTime: string;
   exitTime: string;
   transportation: boolean;
+  category: "A" | "C";
 }
 
 export interface WorkerSummary {

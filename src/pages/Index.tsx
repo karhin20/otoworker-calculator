@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Worker, OvertimeEntry, WorkerSummary } from "@/types";
@@ -6,6 +5,7 @@ import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEn
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus } from "lucide-react";
+import { format } from "date-fns";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -49,6 +49,33 @@ const Index = () => {
         transportationCost,
       };
     });
+  };
+
+  const exportData = (type: 'overtime' | 'transport') => {
+    const summary = calculateSummary();
+    let csvContent = '';
+
+    if (type === 'overtime') {
+      csvContent = 'Name,Staff ID,Grade,Overtime Hours,Overtime Amount\n';
+      summary.forEach((row) => {
+        csvContent += `${row.name},${row.staffId},${row.grade},${row.overtimeHours},${row.overtimeAmount}\n`;
+      });
+    } else {
+      csvContent = 'Name,Staff ID,Transportation Days,Transportation Cost\n';
+      summary.forEach((row) => {
+        csvContent += `${row.name},${row.staffId},${row.transportationDays},${row.transportationCost}\n`;
+      });
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${type}_summary_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -135,14 +162,18 @@ const Index = () => {
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex justify-end space-x-4">
               <Button
-                onClick={() => {
-                  // Implement export functionality
-                  console.log("Exporting data...");
-                }}
+                onClick={() => exportData('overtime')}
+                variant="outline"
               >
-                Export Data
+                Export Overtime Data
+              </Button>
+              <Button
+                onClick={() => exportData('transport')}
+                variant="outline"
+              >
+                Export Transport Data
               </Button>
             </div>
           </Card>
