@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { format, isWeekend } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Bus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface OvertimeEntryProps {
@@ -25,6 +25,8 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
   const [transportation, setTransportation] = useState(false);
   const [category, setCategory] = useState<"A" | "C">("A");
 
+  const selectedWorkerDetails = workers.find(w => w.id === selectedWorker);
+
   const hours = Array.from({ length: 24 }, (_, i) => 
     i.toString().padStart(2, '0') + ":00"
   );
@@ -34,6 +36,12 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
       setCategory(isWeekend(date) ? "C" : "A");
     }
   }, [date]);
+
+  useEffect(() => {
+    if (selectedWorkerDetails) {
+      setTransportation(selectedWorkerDetails.transportRequired);
+    }
+  }, [selectedWorkerDetails]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +96,25 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
             ))}
           </select>
         </div>
+
+        {selectedWorkerDetails && (
+          <Card className="p-4 bg-gray-50 border-blue-200 space-y-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm text-gray-500">Staff ID</Label>
+                <p className="font-medium">{selectedWorkerDetails.staffId}</p>
+              </div>
+              <div>
+                <Label className="text-sm text-gray-500">Grade</Label>
+                <p className="font-medium">{selectedWorkerDetails.grade}</p>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-gray-500">Default Area</Label>
+              <p className="font-medium">{selectedWorkerDetails.defaultArea}</p>
+            </div>
+          </Card>
+        )}
 
         <div className="space-y-2">
           <Label>Date</Label>
@@ -161,16 +188,23 @@ export function OvertimeEntry({ workers, onSubmit }: OvertimeEntryProps) {
           </Select>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="transportation"
-            checked={transportation}
-            onChange={(e) => setTransportation(e.target.checked)}
-            className="rounded border-gray-300"
-          />
-          <Label htmlFor="transportation">Transportation Required</Label>
-        </div>
+        <Card className="p-4 bg-blue-50 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Bus className="h-5 w-5 text-blue-500" />
+              <Label htmlFor="transportation" className="text-blue-800 font-medium">
+                Transportation Required
+              </Label>
+            </div>
+            <input
+              type="checkbox"
+              id="transportation"
+              checked={transportation}
+              onChange={(e) => setTransportation(e.target.checked)}
+              className="h-5 w-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+            />
+          </div>
+        </Card>
 
         <Button type="submit" className="w-full">
           Submit Entry
