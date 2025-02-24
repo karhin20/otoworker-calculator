@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import AddWorker from "./pages/AddWorker";
 import MonthlySummary from "./pages/MonthlySummary";
 import WorkerDetails from "./pages/WorkerDetails";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => {
               <Route path="/add-worker" element={<AddWorker />} />
               <Route path="/monthly-summary" element={<MonthlySummary />} />
               <Route path="/worker-details" element={<WorkerDetails />} />
+              <Route path="/signin" element={<SignIn />} />
+              <Route path="/signup" element={<SignUp />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />

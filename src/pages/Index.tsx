@@ -4,7 +4,7 @@ import { Worker, OvertimeEntry, WorkerSummary } from "@/types";
 import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, Calendar, Users, LogIn, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 
 const Index = () => {
@@ -81,23 +81,52 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Overtime Calculator
-          </h1>
-          <p className="mt-4 text-lg text-gray-500">
-            Manage worker overtime and transportation costs
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Overtime Calculator
+            </h1>
+            <p className="mt-4 text-lg text-gray-500">
+              Manage worker overtime and transportation costs
+            </p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/signin")}
+            >
+              <LogIn className="mr-2 h-4 w-4" /> Sign In
+            </Button>
+            <Button
+              onClick={() => navigate("/signup")}
+            >
+              <UserPlus className="mr-2 h-4 w-4" /> Sign Up
+            </Button>
+          </div>
         </div>
 
-        <div className="flex justify-end">
-          <Button
-            onClick={() => navigate("/add-worker")}
-            className="animate-fadeIn"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add New Worker
-          </Button>
-        </div>
+        <Card className="p-4 bg-white shadow-sm">
+          <nav className="flex space-x-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/add-worker")}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Worker
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/monthly-summary")}
+            >
+              <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/worker-details")}
+            >
+              <Users className="mr-2 h-4 w-4" /> Worker Details
+            </Button>
+          </nav>
+        </Card>
 
         <div className="grid grid-cols-1 gap-8">
           <OvertimeEntryComponent workers={workers} onSubmit={handleAddEntry} />
