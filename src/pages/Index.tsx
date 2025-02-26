@@ -4,13 +4,18 @@ import { Worker, OvertimeEntry, WorkerSummary } from "@/types";
 import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Calendar, Users, LogIn, UserPlus } from "lucide-react";
+import { Plus, Calendar, Users, LogOut } from "lucide-react";
 import { format } from "date-fns";
 
 const Index = () => {
   const navigate = useNavigate();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [entries, setEntries] = useState<OvertimeEntry[]>([]);
+
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    navigate("/");
+  };
 
   const handleAddEntry = (entryData: OvertimeEntry) => {
     setEntries([...entries, entryData]);
@@ -90,19 +95,12 @@ const Index = () => {
               Manage worker overtime and transportation costs
             </p>
           </div>
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              onClick={() => navigate("/signin")}
-            >
-              <LogIn className="mr-2 h-4 w-4" /> Sign In
-            </Button>
-            <Button
-              onClick={() => navigate("/signup")}
-            >
-              <UserPlus className="mr-2 h-4 w-4" /> Sign Up
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={handleSignOut}
+          >
+            <LogOut className="mr-2 h-4 w-4" /> Sign Out
+          </Button>
         </div>
 
         <Card className="p-4 bg-white shadow-sm">

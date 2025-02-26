@@ -61,8 +61,8 @@ export interface WorkerSummary {
   name: string;
   staffId: string;
   grade: string;
-  overtimeHours: number;
-  overtimeAmount: number;
+  categoryAHours: number;  // Changed from overtimeHours/overtimeAmount
+  categoryCHours: number;  // Added for category C hours
   transportationDays: number;
   transportationCost: number;
 }
@@ -74,4 +74,33 @@ export interface WorkerDetail {
   overtimeHours: number;
   transportation: boolean;
   transportationCost: number;
+}
+
+// src/types/index.ts
+export interface OvertimeEntry {
+  workerId: string;
+  date: Date;
+  totalHours: number;  // Changed from entryTime/exitTime to totalHours
+  overtimeHours: number;
+  category: "A" | "C";
+  transportation: boolean;
+}
+
+export interface WorkerSummary {
+  workerId: string;
+  name: string;
+  staffId: string;
+  grade: string;
+  categoryAHours: number;  // Changed from overtimeHours/overtimeAmount
+  categoryCHours: number;  // Added for category C hours
+  transportationDays: number;
+  transportationCost: number;
+}
+
+// Other interfaces remain unchanged
+
+export interface Holiday {
+  id: string;
+  date: Date;
+  name: string;
 }
