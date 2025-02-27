@@ -11,6 +11,7 @@ import Index from "@/pages/Index";
 import WorkerDetails from "@/pages/WorkerDetails";
 import MonthlySummary from "@/pages/MonthlySummary";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AddWorker from "./pages/AddWorker";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +26,7 @@ const App = () => {
               <Route path="/" element={<Landing />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
-
+              
               {/* Protected routes */}
               <Route
                 path="/dashboard"
@@ -40,6 +41,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <WorkerDetails />
+                  </ProtectedRoute>
+                }
+              />
+                            <Route
+                path="/add-worker"
+                element={
+                  <ProtectedRoute>
+                    <AddWorker />
                   </ProtectedRoute>
                 }
               />

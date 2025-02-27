@@ -11,36 +11,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        navigate("/signin");
-        return;
-      }
-
-      try {
-        // Verify token with backend
-        const response = await fetch("http://localhost:3000/api/workers", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          setIsAuthenticated(true);
-        } else {
-          throw new Error("Invalid token");
-        }
-      } catch (error) {
-        localStorage.removeItem("token");
-        navigate("/signin");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/signin");
+      return;
+    }
+    setIsAuthenticated(true);
+    setIsLoading(false);
   }, [navigate]);
 
   if (isLoading) {

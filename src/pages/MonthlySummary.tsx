@@ -65,6 +65,48 @@ const MonthlySummary = () => {
     (_, i) => selectedYear - 2 + i
   );
 
+  const calculateTotals = () => {
+    return summary.reduce((acc, item) => ({
+      totalCategoryA: acc.totalCategoryA + (item.category_a_hours || 0),
+      totalCategoryC: acc.totalCategoryC + (item.category_c_hours || 0),
+      totalTransport: acc.totalTransport + (item.transportation_cost || 0)
+    }), {
+      totalCategoryA: 0,
+      totalCategoryC: 0,
+      totalTransport: 0
+    });
+  };
+
+  const exportData = (type: 'overtime' | 'transport') => {
+    const totals = calculateTotals();
+    let csvContent = '';
+    const monthYear = `${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}`;
+
+    if (type === 'overtime') {
+      csvContent = 'Name,Staff ID,Grade,Category A Hours,Category C Hours\n';
+      summary.forEach((row) => {
+        csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},${row.category_c_hours.toFixed(2)}\n`;
+      });
+      csvContent += `\nTotals,,,${totals.totalCategoryA.toFixed(2)},${totals.totalCategoryC.toFixed(2)}\n`;
+    } else {
+      csvContent = 'Name,Staff ID,Grade,Total Days,Transport Cost\n';
+      summary.forEach((row) => {
+        csvContent += `${row.name},${row.staff_id},${row.grade},${row.transportation_days},${row.transportation_cost.toFixed(2)}\n`;
+      });
+      csvContent += `\nTotals,,,,${totals.totalTransport.toFixed(2)}\n`;
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${type}_summary_${monthYear}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -129,6 +171,12 @@ const MonthlySummary = () => {
             >
               Back to Dashboard
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/worker-details")}
+            >
+              Worker Details
+            </Button>
           </div>
 
           {loading ? (
@@ -156,7 +204,7 @@ const MonthlySummary = () => {
                       Category C Hours
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Transport Days
+                      Total Days
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Transport Amount
@@ -165,34 +213,65 @@ const MonthlySummary = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {summary.map((item) => (
-                    <tr key={item.workerId}>
+                    <tr key={item.worker_id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {item.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.staffId}
+                        {item.staff_id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {item.grade}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.categoryAHours.toFixed(2)}
+                        {item.category_a_hours.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.categoryCHours.toFixed(2)}
+                        {item.category_c_hours.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.transportationDays}
+                        {item.transportation_days}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ₵{item.transportationCost.toFixed(2)}
+                        ₵{(item.transportation_cost || 0).toFixed(2)}
                       </td>
                     </tr>
                   ))}
+                  <tr className="bg-gray-50 font-medium">
+                    <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      Monthly Totals
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {calculateTotals().totalCategoryA.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {calculateTotals().totalCategoryC.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₵{calculateTotals().totalTransport.toFixed(2)}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           )}
+
+          <div className="mt-4 flex justify-end space-x-4">
+            <Button
+              onClick={() => exportData('overtime')}
+              variant="outline"
+            >
+              Export Overtime Data
+            </Button>
+            <Button
+              onClick={() => exportData('transport')}
+              variant="outline"
+            >
+              Export Transport Data
+            </Button>
+          </div>
         </Card>
       </div>
     </div>

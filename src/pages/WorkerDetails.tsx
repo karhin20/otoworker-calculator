@@ -2,19 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { WorkerDetail, Worker } from "@/types";
+import { LogOut } from "lucide-react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, LogOut } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { workers, overtime } from "@/lib/api";
+import { Worker, WorkerDetail } from "@/types";
 
 const WorkerDetails = () => {
   const navigate = useNavigate();
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedWorker, setSelectedWorker] = useState("");
   const [details, setDetails] = useState<WorkerDetail[]>([]);
   const [workersList, setWorkersList] = useState<Worker[]>([]);
@@ -43,14 +40,14 @@ const WorkerDetails = () => {
 
   useEffect(() => {
     const fetchDetails = async () => {
-      if (!selectedWorker || !startDate || !endDate) return;
+      if (!selectedWorker) return;
 
       setLoading(true);
       try {
         const data = await overtime.getByWorker(
           selectedWorker,
-          format(startDate, "yyyy-MM-dd"),
-          format(endDate, "yyyy-MM-dd")
+          selectedMonth,
+          selectedYear
         );
         setDetails(data);
       } catch (error) {
@@ -61,15 +58,39 @@ const WorkerDetails = () => {
     };
 
     fetchDetails();
-  }, [selectedWorker, startDate, endDate]);
+  }, [selectedWorker, selectedMonth, selectedYear]);
 
-  const handleSignOut = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/");
+  const months = [
+    { value: 1, label: "January" },
+    { value: 2, label: "February" },
+    { value: 3, label: "March" },
+    { value: 4, label: "April" },
+    { value: 5, label: "May" },
+    { value: 6, label: "June" },
+    { value: 7, label: "July" },
+    { value: 8, label: "August" },
+    { value: 9, label: "September" },
+    { value: 10, label: "October" },
+    { value: 11, label: "November" },
+    { value: 12, label: "December" }
+  ];
+
+  const years = Array.from(
+    { length: 5 },
+    (_, i) => selectedYear - 2 + i
+  );
+
+  const calculateTotals = () => {
+    return details.reduce((acc, detail) => ({
+      totalCategoryA: acc.totalCategoryA + (detail.category_a_hours || 0),
+      totalCategoryC: acc.totalCategoryC + (detail.category_c_hours || 0),
+      totalTransport: acc.totalTransport + (detail.transportation ? (detail.transportation_cost || parseFloat(detail.workers.default_area) || 0) : 0)
+    }), {
+      totalCategoryA: 0,
+      totalCategoryC: 0,
+      totalTransport: 0
+    });
   };
-
-  const selectedWorkerDetails = workersList.find(w => w.id === selectedWorker);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -85,72 +106,21 @@ const WorkerDetails = () => {
               </p>
             )}
           </div>
-          <Button
-            variant="outline"
-            onClick={handleSignOut}
-          >
+          <Button variant="outline" onClick={() => navigate("/")}>
             <LogOut className="mr-2 h-4 w-4" /> Sign Out
           </Button>
         </div>
 
         <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-medium mb-4">Select Date Range</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">End Date</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
-
+          <div className="flex gap-4 mb-6">
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+              Back to Dashboard
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/monthly-summary")}>
+              Monthly Summary
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <h3 className="text-lg font-medium mb-4">Select Worker</h3>
               <Select
@@ -163,35 +133,53 @@ const WorkerDetails = () => {
                 <SelectContent>
                   {workersList.map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
-                      {worker.name} ({worker.staffId})
+                      {worker.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
 
-              {selectedWorkerDetails && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium">Worker Information</h4>
-                  <p className="text-sm text-gray-600 mt-2">Name: {selectedWorkerDetails.name}</p>
-                  <p className="text-sm text-gray-600">Staff ID: {selectedWorkerDetails.staffId}</p>
-                  <p className="text-sm text-gray-600">Grade: {selectedWorkerDetails.grade}</p>
-                  <p className="text-sm text-gray-600">Default Area: {selectedWorkerDetails.defaultArea}</p>
-                </div>
-              )}
+            <div>
+              <h3 className="text-lg font-medium mb-4">Select Month</h3>
+              <Select
+                value={selectedMonth.toString()}
+                onValueChange={(value) => setSelectedMonth(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value.toString()}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium mb-4">Select Year</h3>
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(value) => setSelectedYear(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="mt-8">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Overtime Details</h3>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/dashboard")}
-              >
-                Back to Dashboard
-              </Button>
-            </div>
-
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -211,7 +199,13 @@ const WorkerDetails = () => {
                         Exit Time
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Hours
+                        Category
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category A Hours
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category C Hours
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Transport
@@ -225,27 +219,50 @@ const WorkerDetails = () => {
                           {format(new Date(detail.date), "PP")}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.entryTime}
+                          {detail.entry_time}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.exitTime}
+                          {detail.exit_time}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.overtimeHours.toFixed(2)}
+                          {detail.category}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ₵{detail.transportationCost.toFixed(2)}
+                          {detail.category_a_hours}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {detail.category_c_hours}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {detail.transportation 
+                            ? `₵${(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}`
+                            : 'No'
+                          }
                         </td>
                       </tr>
                     ))}
+                    <tr className="bg-gray-50 font-medium">
+                      <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        Totals
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {calculateTotals().totalCategoryA.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {calculateTotals().totalCategoryC.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ₵{calculateTotals().totalTransport.toFixed(2)}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
             ) : (
               <p className="text-center text-gray-500 py-8">
                 {selectedWorker
-                  ? "No overtime entries found for the selected date range"
-                  : "Select a worker and date range to view details"}
+                  ? "No overtime entries found for the selected period"
+                  : "Select a worker to view details"}
               </p>
             )}
           </div>

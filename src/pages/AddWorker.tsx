@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Worker, AREAS, Grade } from "@/types";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { workers } from "@/lib/api";
 
 const GRADES: Grade[] = [
   "Artisan (P/F)",
@@ -24,6 +24,7 @@ const GRADES: Grade[] = [
 
 const AddWorker = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     staffId: "",
@@ -32,7 +33,7 @@ const AddWorker = () => {
     transportRequired: true,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.staffId || !formData.grade || !formData.defaultArea) {
       toast({
@@ -43,32 +44,58 @@ const AddWorker = () => {
       return;
     }
 
-    const newWorker: Omit<Worker, "id"> = {
-      ...formData,
-      grade: formData.grade as Grade,
-    };
+    setLoading(true);
+    try {
+      const newWorker = {
+        name: formData.name,
+        staffId: formData.staffId,
+        grade: formData.grade,
+        defaultArea: formData.defaultArea,
+        transportRequired: formData.transportRequired,
+      };
 
-    // Here you would typically save the worker data
-    console.log("New worker:", newWorker);
-    
-    toast({
-      title: "Success",
-      description: "Worker added successfully",
-    });
+      await workers.create(newWorker);
 
-    navigate("/");
+      toast({
+        title: "Success",
+        description: "Worker added successfully",
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add worker",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
-        <Button 
-          onClick={() => navigate("/")}
-          variant="outline"
-          className="mb-6"
-        >
-          ← Back to Dashboard
-        </Button>
+        <div className="flex gap-4 mb-6">
+          <Button 
+            onClick={() => navigate("/dashboard")}
+            variant="outline"
+          >
+            Back to Dashboard
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/worker-details")}
+          >
+            Worker Details
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/monthly-summary")}
+          >
+            Monthly Summary
+          </Button>
+        </div>
 
         <Card className="p-6 space-y-6 animate-slideIn">
           <div className="space-y-2">
@@ -85,6 +112,7 @@ const AddWorker = () => {
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter worker's full name"
                 className="w-full"
+                required
               />
             </div>
 
@@ -96,6 +124,7 @@ const AddWorker = () => {
                 onChange={(e) => setFormData(prev => ({ ...prev, staffId: e.target.value }))}
                 placeholder="Enter staff ID"
                 className="w-full"
+                required
               />
             </div>
 
@@ -104,6 +133,7 @@ const AddWorker = () => {
               <Select
                 value={formData.grade}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, grade: value as Grade }))}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select grade" />
@@ -123,6 +153,7 @@ const AddWorker = () => {
               <Select
                 value={formData.defaultArea}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, defaultArea: value }))}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select area" />
@@ -158,12 +189,16 @@ const AddWorker = () => {
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/dashboard")}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="w-full">
-                Add Worker
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? "Adding Worker..." : "Add Worker"}
               </Button>
             </div>
           </form>

@@ -1,10 +1,11 @@
 export interface Worker {
   id: string;
   name: string;
-  staffId: string;
+  staff_id: string;
   grade: Grade;
-  defaultArea: string;
-  transportRequired: boolean;
+  default_area: string;
+  transport_required: boolean;
+  created_at?: string;
 }
 
 export type Grade = 
@@ -48,56 +49,46 @@ export const AREAS: Area[] = [
 ];
 
 export interface OvertimeEntry {
-  workerId: string;
+  worker_id: string;
   date: Date;
-  entryTime: string;
-  exitTime: string;
-  transportation: boolean;
+  entry_time: string;
+  exit_time: string;
   category: "A" | "C";
+  category_a_hours: number;
+  category_c_hours: number;
+  transportation: boolean;
+  transportation_cost?: number;
 }
 
 export interface WorkerSummary {
-  workerId: string;
+  worker_id: string;
   name: string;
-  staffId: string;
+  staff_id: string;
   grade: string;
-  categoryAHours: number;  // Changed from overtimeHours/overtimeAmount
-  categoryCHours: number;  // Added for category C hours
-  transportationDays: number;
-  transportationCost: number;
+  category_a_hours: number;
+  category_c_hours: number;
+  transportation_days: number;
+  transportation_cost: number;
 }
 
 export interface WorkerDetail {
-  date: Date;
-  entryTime: string;
-  exitTime: string;
-  overtimeHours: number;
-  transportation: boolean;
-  transportationCost: number;
-}
-
-// src/types/index.ts
-export interface OvertimeEntry {
-  workerId: string;
-  date: Date;
-  totalHours: number;  // Changed from entryTime/exitTime to totalHours
-  overtimeHours: number;
+  id: string;
+  worker_id: string;
+  date: string;
+  entry_time: string;
+  exit_time: string;
   category: "A" | "C";
+  category_a_hours: number;
+  category_c_hours: number;
   transportation: boolean;
+  transportation_cost: number | null;
+  workers: {
+    name: string;
+    staff_id: string;
+    grade: string;
+    default_area: string;
+  };
 }
-
-export interface WorkerSummary {
-  workerId: string;
-  name: string;
-  staffId: string;
-  grade: string;
-  categoryAHours: number;  // Changed from overtimeHours/overtimeAmount
-  categoryCHours: number;  // Added for category C hours
-  transportationDays: number;
-  transportationCost: number;
-}
-
-// Other interfaces remain unchanged
 
 export interface Holiday {
   id: string;

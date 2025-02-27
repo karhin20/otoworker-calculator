@@ -54,7 +54,13 @@ export const auth = {
 // Worker endpoints
 export const workers = {
   getAll: () => apiCall("/workers"),
-  create: (data: any) => apiCall("/workers", { method: "POST", body: data }),
+  create: (data: {
+    name: string;
+    staff_id: string;
+    grade: string;
+    default_area: string;
+    transport_required: boolean;
+  }) => apiCall("/workers", { method: "POST", body: data }),
 };
 
 
@@ -62,18 +68,28 @@ export const workers = {
 
 export const overtime = {
   create: (data: { 
-    workerId: string;
-    date: string;
-    totalHours: number;
+    worker_id: string;
+    date: string;  // Will be converted from Date to string when sent
+    entry_time: string;
+    exit_time: string;
+    category: 'A' | 'C';
+    category_a_hours: number;
+    category_c_hours: number;
     transportation: boolean;
-  }) => apiCall("/overtime", { method: "POST", body: data }),
-  
-  getByWorker: (workerId: string, startDate?: string, endDate?: string) => {
-    const query = startDate && endDate ? `?startDate=${startDate}&endDate=${endDate}` : "";
-    return apiCall(`/overtime/${workerId}${query}`);
+    transportation_cost?: number;
+  }) => {
+    // Send data directly without transforming - backend expects snake_case
+    return apiCall("/overtime", { 
+      method: "POST", 
+      body: data
+    });
   },
   
-  getMonthlySummary: (month: number, year: number) =>
+  getByWorker: (workerId: string, month: number, year: number): Promise<WorkerDetail[]> => {
+    return apiCall(`/overtime/${workerId}?month=${month}&year=${year}`);
+  },
+  
+  getMonthlySummary: (month: number, year: number): Promise<WorkerSummary[]> =>
     apiCall(`/summary/monthly?month=${month}&year=${year}`),
 };
 

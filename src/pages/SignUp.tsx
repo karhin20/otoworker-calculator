@@ -41,15 +41,25 @@ const SignUp = () => {
     setLoading(true);
 
     try {
+      console.log("Submitting form data:", formData); // Debug log
+
       const response = await fetch("http://localhost:3000/api/admin/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          secretCode: formData.secretCode,
+          name: formData.name,
+          staffId: formData.staffId, // This will be converted to staff_id in backend
+          grade: formData.grade
+        }),
       });
 
       const data = await response.json();
+      console.log("Response data:", data); // Debug log
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to sign up");
@@ -58,14 +68,15 @@ const SignUp = () => {
       // Store the token and user info
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify({
-        name: formData.name,
-        staffId: formData.staffId,
-        grade: formData.grade
+        name: data.user.name,
+        staffId: data.user.staffId,
+        grade: data.user.grade
       }));
       
       // Redirect to dashboard
       navigate("/dashboard");
     } catch (err: any) {
+      console.error("Signup error:", err); // Debug log
       setError(err.message);
     } finally {
       setLoading(false);
