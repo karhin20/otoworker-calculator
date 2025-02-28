@@ -36,6 +36,9 @@ export async function apiCall(endpoint: string, options: ApiOptions = {}) {
   const data = await response.json();
 
   if (!response.ok) {
+    if (response.status === 409) {
+      throw new Error("An entry already exists for this worker on the selected date");
+    }
     throw new Error(data.error || "Something went wrong");
   }
 
@@ -67,9 +70,9 @@ export const workers = {
 // In src/lib/api.ts
 
 export const overtime = {
-  create: (data: { 
+  create: async (data: { 
     worker_id: string;
-    date: string;  // Will be converted from Date to string when sent
+    date: string;
     entry_time: string;
     exit_time: string;
     category: 'A' | 'C';
@@ -78,11 +81,17 @@ export const overtime = {
     transportation: boolean;
     transportation_cost?: number;
   }) => {
-    // Send data directly without transforming - backend expects snake_case
-    return apiCall("/overtime", { 
-      method: "POST", 
-      body: data
-    });
+    try {
+      return await apiCall("/overtime", { 
+        method: "POST", 
+        body: data
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "An entry already exists for this worker on the selected date") {
+        throw error;
+      }
+      throw new Error("An entry already exists for this worker on the selected date");
+    }
   },
   
   getByWorker: (workerId: string, month: number, year: number): Promise<WorkerDetail[]> => {
@@ -91,6 +100,16 @@ export const overtime = {
   
   getMonthlySummary: (month: number, year: number): Promise<WorkerSummary[]> =>
     apiCall(`/summary/monthly?month=${month}&year=${year}`),
+
+  checkDuplicateEntry: async (workerId: string, date: string): Promise<boolean> => {
+    try {
+      const response = await apiCall(`/overtime/check-duplicate?worker_id=${workerId}&date=${date}`);
+      return response.exists;
+    } catch (error) {
+      console.error('Error checking duplicate entry:', error);
+      throw error;
+    }
+  },
 };
 
 export const holidays = {

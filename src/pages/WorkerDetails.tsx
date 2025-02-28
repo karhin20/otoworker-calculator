@@ -92,6 +92,46 @@ const WorkerDetails = () => {
     });
   };
 
+  const exportWorkerDetails = () => {
+    if (!details.length || !selectedWorker) return;
+
+    const worker = workersList.find(w => w.id === selectedWorker);
+    if (!worker) return;
+
+    const monthName = months.find(m => m.value === selectedMonth)?.label;
+    const fileName = `${worker.name}_${monthName}_${selectedYear}_details.csv`;
+
+    const totals = calculateTotals();
+    let csvContent = 'Date,Entry Time,Exit Time,Category,Category A Hours,Category C Hours,Transport Cost\n';
+
+    // Add each detail row
+    details.forEach((detail) => {
+      csvContent += `${format(new Date(detail.date), "yyyy-MM-dd")},`;
+      csvContent += `${detail.entry_time},`;
+      csvContent += `${detail.exit_time},`;
+      csvContent += `${detail.category},`;
+      csvContent += `${detail.category_a_hours || ''},`;
+      csvContent += `${detail.category_c_hours || ''},`;
+      csvContent += `${detail.transportation ? (detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2) : ''}\n`;
+    });
+
+    // Add totals row
+    csvContent += `\nTotals,,,,`;
+    csvContent += `${totals.totalCategoryA.toFixed(2)},`;
+    csvContent += `${totals.totalCategoryC.toFixed(2)},`;
+    csvContent += `${totals.totalTransport.toFixed(2)}`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -185,79 +225,90 @@ const WorkerDetails = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : details.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Entry Time
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Exit Time
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category A Hours
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category C Hours
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Transport
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {details.map((detail, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {format(new Date(detail.date), "PP")}
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Entry Time
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Exit Time
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Category
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Category A Hours
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Category C Hours
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Transport
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {details.map((detail, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {format(new Date(detail.date), "PP")}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {detail.entry_time}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {detail.exit_time}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {detail.category}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {detail.category_a_hours}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {detail.category_c_hours}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {detail.transportation 
+                              ? `₵${(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}`
+                              : 'No'
+                            }
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-50 font-medium">
+                        <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          Totals
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.entry_time}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {calculateTotals().totalCategoryA.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.exit_time}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {calculateTotals().totalCategoryC.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.category}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.category_a_hours}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.category_c_hours}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {detail.transportation 
-                            ? `₵${(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}`
-                            : 'No'
-                          }
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₵{calculateTotals().totalTransport.toFixed(2)}
                         </td>
                       </tr>
-                    ))}
-                    <tr className="bg-gray-50 font-medium">
-                      <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Totals
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {calculateTotals().totalCategoryA.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {calculateTotals().totalCategoryC.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₵{calculateTotals().totalTransport.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={exportWorkerDetails}
+                    disabled={!details.length}
+                  >
+                    Export Details
+                  </Button>
+                </div>
+              </>
             ) : (
               <p className="text-center text-gray-500 py-8">
                 {selectedWorker
