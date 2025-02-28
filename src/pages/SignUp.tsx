@@ -43,7 +43,7 @@ const SignUp = () => {
     try {
       console.log("Submitting form data:", formData); // Debug log
 
-      const response = await fetch("http://localhost:3000/api/admin/signup", {
+      const response = await fetch("https://overtime-transport.vercel.app/admin/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
