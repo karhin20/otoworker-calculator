@@ -1,27 +1,15 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "^/service-worker.js$",
-      "headers": {
-        "cache-control": "public, max-age=0, must-revalidate"
+    "version": 2,
+    "builds": [
+      {
+        "src": "*.js",
+        "use": "@vercel/node"
       }
-    },
-    {
-      "src": "^/manifest.json$",
-      "headers": {
-        "cache-control": "public, max-age=0, must-revalidate"
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "/"
       }
-    },
-    {
-      "src": "^/assets/.*",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ]
-} 
+    ]
+  }
