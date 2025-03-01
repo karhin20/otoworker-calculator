@@ -188,7 +188,7 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
           </div>
 
           <div>
-            <Label htmlFor="entryTime">Entry Time</Label>
+            <Label htmlFor="entryTime">Entry Time(24 hour format)</Label>
             <Select
               value={entryTime}
               onValueChange={setEntryTime}
@@ -207,7 +207,7 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
           </div>
 
           <div>
-            <Label htmlFor="exitTime">Exit Time</Label>
+            <Label htmlFor="exitTime">Exit Time(24 hour format)</Label>
             <Select
               value={exitTime}
               onValueChange={setExitTime}
