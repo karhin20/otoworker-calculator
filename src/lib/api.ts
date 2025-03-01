@@ -1,7 +1,6 @@
 import { WorkerDetail, WorkerSummary } from "@/types";
 
-// Get the API URL from environment or use localhost as fallback
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://overtime-transport-backend.vercel.app/api";
+const API_BASE_URL = "https://overtime-transport-backend.vercel.app/api";
 
 interface ApiOptions {
   method?: string;
@@ -28,20 +27,24 @@ export async function apiCall(endpoint: string, options: ApiOptions = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method,
-    headers,
-    credentials: 'include',
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
 
-  const data = await response.json();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
 
-  if (!response.ok) {
-    throw new Error(data.error || "Something went wrong");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("API call failed:", error);
+    throw error;
   }
-
-  return data;
 }
 
 // Auth endpoints
