@@ -41,7 +41,7 @@ const SignUp = () => {
     setLoading(true);
 
     try {
-      console.log("Submitting form data:", formData); // Debug log
+      console.log("Submitting form data:", formData); 
 
       const response = await fetch("https://overtime-transport-backend.vercel.app/api/admin/signup", {
         method: "POST",
@@ -53,13 +53,13 @@ const SignUp = () => {
           password: formData.password,
           secretCode: formData.secretCode,
           name: formData.name,
-          staffId: formData.staffId, // This will be converted to staff_id in backend
+          staffId: formData.staffId, 
           grade: formData.grade
         }),
       });
 
       const data = await response.json();
-      console.log("Response data:", data); // Debug log
+      console.log("Response data:", data); 
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to sign up");
