@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { overtime } from "@/lib/api";
 import { WorkerSummary } from "@/types";
+import { toast } from "@/components/ui/use-toast";
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
@@ -27,10 +28,20 @@ const MonthlySummary = () => {
     const fetchSummary = async () => {
       setLoading(true);
       try {
-        const data = await overtime.getMonthlySummary(selectedMonth, selectedYear);
+        console.log('Fetching summary for:', { month: selectedMonth, year: selectedYear });
+        const data = await overtime.getMonthlySummary(
+          parseInt(selectedMonth.toString()),
+          parseInt(selectedYear.toString())
+        );
+        console.log('Received data:', { dataLength: data.length });
         setSummary(data);
       } catch (error) {
         console.error("Failed to fetch summary:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch monthly summary",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
