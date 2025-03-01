@@ -13,25 +13,6 @@
 
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          import('virtual:pwa-register').then(({ registerSW }) => {
-            registerSW({
-              immediate: true,
-              onRegistered(r) {
-                console.log('SW Registered:', r);
-              },
-              onRegisterError(error) {
-                console.log('SW registration error:', error);
-              }
-            });
-          });
-        });
-      }
-    </script>
   </body>
 </html>

@@ -1,12 +1,15 @@
 import { registerSW } from 'virtual:pwa-register';
 
-const updateSW = registerSW({
-  onNeedRefresh() {
-    if (confirm('New content available. Reload?')) {
-      updateSW(true);
+window.addEventListener('load', () => {
+  const pwaRegister = registerSW({
+    immediate: true,
+    onRegisteredSW(swUrl, r) {
+      console.log('SW registered: ', r);
+    },
+    onRegisterError(error) {
+      console.log('SW registration error', error);
     }
-  },
-  onOfflineReady() {
-    console.log('App ready to work offline');
-  },
+  });
+
+  pwaRegister();
 }); 
