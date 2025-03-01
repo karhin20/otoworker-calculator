@@ -78,7 +78,7 @@ const Index = () => {
       // If transportation is true, set the transportation_cost from area rate
       const dataToSubmit = {
         ...entryData,
-        transportation_cost: entryData.transportation ? area?.rate || 0 : null
+        transportation_cost: entryData.transportation ? area?.rate || 0 : undefined
       };
 
 
@@ -191,86 +191,92 @@ const Index = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Worker
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Staff ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Grade
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category A Hours
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category C Hours
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Days
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Transport Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {summaryData.map((summary) => (
-                      <tr key={summary.worker_id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {summary.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {summary.staff_id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {summary.grade}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {summary.category_a_hours.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {summary.category_c_hours.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {summary.transportation_days}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ₵{summary.transportation_cost.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                    {summaryData.length > 0 && (
-                      <tr className="bg-gray-50 font-medium">
-                        <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          Monthly Totals
-                        </td>
-                        {(() => {
-                          const totals = calculateTotals();
-                          return (
-                            <>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {totals.total_category_a.toFixed(2)}
+                <div className="relative w-full overflow-auto">
+                  <div className="overflow-x-auto border rounded-lg">
+                    <div className="inline-block min-w-full align-middle">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead>
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Worker
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Staff ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Grade
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Category A Hours
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Category C Hours
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Total Days
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Transport Amount
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {summaryData.map((summary) => (
+                            <tr key={summary.worker_id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {summary.name}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {totals.total_category_c.toFixed(2)}
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {summary.staff_id}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {summary.grade}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {summary.category_a_hours.toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {summary.category_c_hours.toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {summary.transportation_days}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ₵{summary.transportation_cost?.toFixed(2) || ''}
+                              </td>
+                            </tr>
+                          ))}
+                          {summaryData.length > 0 && (
+                            <tr className="bg-gray-50 font-medium">
+                              <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                Monthly Totals
+                              </td>
+                              {(() => {
+                                const totals = calculateTotals();
+                                return (
+                                  <>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                      {totals.total_category_a.toFixed(2)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                      {totals.total_category_c.toFixed(2)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {totals.total_transport_cost.toFixed(2)}
-                              </td>
-                            </>
-                          );
-                        })()}
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                      {totals.total_transport_cost.toFixed(2)}
+                                    </td>
+                                  </>
+                                );
+                              })()}
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
             <div className="mt-4 flex justify-end space-x-4">
