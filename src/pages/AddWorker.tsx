@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Worker, AREAS, Grade } from "@/types";
+import { AREAS, Grade } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -48,10 +48,10 @@ const AddWorker = () => {
     try {
       const newWorker = {
         name: formData.name,
-        staffId: formData.staffId,
+        staff_id: formData.staffId,
         grade: formData.grade,
-        defaultArea: formData.defaultArea,
-        transportRequired: formData.transportRequired,
+        default_area: formData.defaultArea,
+        transport_required: formData.transportRequired,
       };
 
       await workers.create(newWorker);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Worker, OvertimeEntry, WorkerSummary, AREAS } from "@/types";
+import { Worker, WorkerSummary, AREAS } from "@/types";
 import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

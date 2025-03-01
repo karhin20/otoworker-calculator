@@ -1,3 +1,5 @@
+import { WorkerDetail, WorkerSummary } from "@/types";
+
 // Get the API URL from environment or use localhost as fallback
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://overtime-transport-backend.vercel.app/api";
 

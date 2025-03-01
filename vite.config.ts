@@ -9,13 +9,18 @@ export default defineConfig({
     host: "::",
     port: 8080,
   },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src")
+    }
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,webp}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/overtime-transport-backend\.vercel\.app\/api/,
@@ -33,7 +38,9 @@ export default defineConfig({
             }
           }
         ],
-        cleanupOutdatedCaches: true
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true
       },
       manifest: {
         name: 'Overtime Calculator',
@@ -67,20 +74,5 @@ export default defineConfig({
         enabled: true
       }
     })
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  build: {
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom']
-        }
-      }
-    }
-  }
+  ]
 });

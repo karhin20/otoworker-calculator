@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Worker, Grade } from "@/types";
 import { Card } from "@/components/ui/card";
@@ -30,7 +29,13 @@ export function WorkerForm({ onSubmit }: WorkerFormProps) {
       });
       return;
     }
-    onSubmit(formData);
+    onSubmit({
+      name: formData.name,
+      staff_id: formData.staffId,
+      grade: formData.grade,
+      default_area: formData.defaultArea,
+      transport_required: formData.transportRequired,
+    });
     setFormData({
       name: "",
       staffId: "",
