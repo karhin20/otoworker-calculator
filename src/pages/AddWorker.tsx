@@ -59,7 +59,6 @@ const AddWorker = () => {
       toast({
         title: "Success",
         description: "Worker added successfully",
-        variant: "success",
       });
 
       navigate("/dashboard");

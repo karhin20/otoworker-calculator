@@ -1,7 +1,5 @@
 // Get the API URL from environment or use localhost as fallback
-import { WorkerDetail, WorkerSummary } from "@/types";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://overtime-transport-backend.vercel.app/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 interface ApiOptions {
   method?: string;
@@ -28,41 +26,20 @@ export async function apiCall(endpoint: string, options: ApiOptions = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method,
-      headers,
-      credentials: 'include',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method,
+    headers,
+    credentials: 'include',
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
-    // For 204 No Content responses
-    if (response.status === 204) {
-      return null;
-    }
+  const data = await response.json();
 
-    let data;
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      data = await response.json();
-    } else {
-      throw new Error("Invalid response format");
-    }
-
-    if (!response.ok) {
-      if (response.status === 409) {
-        throw new Error("An entry already exists for this worker on the selected date");
-      }
-      throw new Error(data.error || "Something went wrong");
-    }
-
-    return data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Failed to make API request");
+  if (!response.ok) {
+    throw new Error(data.error || "Something went wrong");
   }
+
+  return data;
 }
 
 // Auth endpoints
@@ -90,9 +67,9 @@ export const workers = {
 // In src/lib/api.ts
 
 export const overtime = {
-  create: async (data: { 
+  create: (data: { 
     worker_id: string;
-    date: string;
+    date: string;  // Will be converted from Date to string when sent
     entry_time: string;
     exit_time: string;
     category: 'A' | 'C';
@@ -101,17 +78,11 @@ export const overtime = {
     transportation: boolean;
     transportation_cost?: number;
   }) => {
-    try {
-      return await apiCall("/overtime", { 
-        method: "POST", 
-        body: data
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === "An entry already exists for this worker on the selected date") {
-        throw error;
-      }
-      throw new Error("Failed to create overtime entry");
-    }
+    // Send data directly without transforming - backend expects snake_case
+    return apiCall("/overtime", { 
+      method: "POST", 
+      body: data
+    });
   },
   
   getByWorker: (workerId: string, month: number, year: number): Promise<WorkerDetail[]> => {
@@ -120,23 +91,6 @@ export const overtime = {
   
   getMonthlySummary: (month: number, year: number): Promise<WorkerSummary[]> =>
     apiCall(`/summary/monthly?month=${month}&year=${year}`),
-
-  checkDuplicateEntry: async (workerId: string, date: string): Promise<boolean> => {
-    if (!workerId || !date) {
-      throw new Error("Worker ID and date are required");
-    }
-
-    try {
-      const response = await apiCall(`/overtime/check-duplicate?worker_id=${workerId}&date=${date}`);
-      if (response === null || response === undefined) {
-        return false;
-      }
-      return response.exists === true;
-    } catch (error) {
-      console.error('Error checking duplicate entry:', error);
-      throw new Error("Failed to check for duplicate entry");
-    }
-  },
 };
 
 export const holidays = {

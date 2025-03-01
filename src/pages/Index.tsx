@@ -15,15 +15,6 @@ const Index = () => {
   const [loading, setLoading] = useState(false);
   const [currentMonth] = useState(new Date().getMonth() + 1);
   const [currentYear] = useState(new Date().getFullYear());
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
-
-  useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      setUser(JSON.parse(userStr));
-    }
-  }, []);
 
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -90,16 +81,16 @@ const Index = () => {
         transportation_cost: entryData.transportation ? area?.rate || 0 : null
       };
 
+
+      // Submit the entry with the transportation cost
       await overtime.create(dataToSubmit);
+      
+      // Refresh the summary data after adding new entry
       const newSummaryData = await overtime.getMonthlySummary(currentMonth, currentYear);
       setSummaryData(newSummaryData);
-      setErrorMessage(null);
     } catch (error) {
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("An unexpected error occurred.");
-      }
+      console.error("Error adding entry:", error);
+      throw error;
     }
   };
 
@@ -152,12 +143,7 @@ const Index = () => {
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
               Overtime & Tranportation Fee Calculator
             </h1>
-            {user && (
-              <p className="mt-2 text-lg text-gray-600">
-                Welcome, {user.name} ({user.staffId}) - {user.grade}
-              </p>
-            )}
-            <p className="mt-4 font-bold text-lg text-gray-500">
+            <p className="mt-4 text-lg text-gray-500">
               Manage worker overtime and transportation costs
             </p>
           </div>
@@ -303,12 +289,6 @@ const Index = () => {
             </div>
           </Card>
         </div>
-
-        {errorMessage && (
-          <div className="text-red-500">
-            {errorMessage}
-          </div>
-        )}
       </div>
     </div>
   );

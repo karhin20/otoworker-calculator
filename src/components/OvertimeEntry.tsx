@@ -14,7 +14,6 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { overtime } from "@/lib/api";
 
 interface OvertimeEntryProps {
   workers: Worker[];
@@ -73,31 +72,10 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
     }
   };
 
-  const handlePreview = async (e: React.FormEvent) => {
+  const handlePreview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedWorker || !date || !entryTime || !exitTime) return;
-
-    try {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      const hasDuplicate = await overtime.checkDuplicateEntry(selectedWorker, formattedDate);
-
-      if (hasDuplicate) {
-        toast({
-          title: "Duplicate Entry",
-          description: "An entry already exists for this worker on the selected date.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setShowSummary(true);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An entry already exists for this worker on the selected date.",
-        variant: "destructive",
-      });
-    }
+    setShowSummary(true);
   };
 
   const handleSubmit = async () => {
@@ -126,7 +104,6 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
       toast({
         title: "Success",
         description: "Overtime entry has been added successfully.",
-        variant: "success",
       });
 
       // Reset form
@@ -138,13 +115,9 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
       setShowSummary(false);
       setCategory("A");
     } catch (error) {
-      let errorMessage = "An entry already exists for this worker on the selected date";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to add overtime entry. Please try again.",
         variant: "destructive",
       });
     } finally {
