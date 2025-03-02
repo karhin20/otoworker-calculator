@@ -56,12 +56,25 @@ const AddWorker = () => {
 
       toast({
         title: "Success",
-        description: "Worker added successfully",
+        description: `Worker ${formData.name} has been added successfully`,
+        variant: "default",
       });
 
-      navigate("/dashboard");
+      // Reset form and navigate after successful addition
+      setFormData({
+        name: "",
+        staff_id: "",
+        grade: "" as Grade,
+        default_area: "",
+        transport_required: true,
+      });
+
+      // Short delay before navigation to ensure toast is visible
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+
     } catch (error: any) {
-      console.error("Error adding worker:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to add worker",

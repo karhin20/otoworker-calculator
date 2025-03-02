@@ -66,7 +66,6 @@ export const workers = {
     default_area: string;
     transport_required: boolean;
   }) => {
-    // Transform the data to match backend expectations
     const transformedData = {
       name: data.name,
       staffId: data.staff_id,
@@ -74,7 +73,6 @@ export const workers = {
       defaultArea: data.default_area,
       transportRequired: data.transport_required
     };
-    console.log("Creating worker with data is sent to backend:", transformedData);
     return apiCall("/workers", { 
       method: "POST", 
       body: transformedData 
