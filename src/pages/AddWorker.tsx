@@ -27,15 +27,15 @@ const AddWorker = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    staffId: "",
+    staff_id: "",
     grade: "" as Grade,
-    defaultArea: "",
-    transportRequired: true,
+    default_area: "",
+    transport_required: true,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.staffId || !formData.grade || !formData.defaultArea) {
+    if (!formData.name || !formData.staff_id || !formData.grade || !formData.default_area) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -46,15 +46,13 @@ const AddWorker = () => {
 
     setLoading(true);
     try {
-      const newWorker = {
+      await workers.create({
         name: formData.name,
-        staff_id: formData.staffId,
+        staff_id: formData.staff_id,
         grade: formData.grade,
-        default_area: formData.defaultArea,
-        transport_required: formData.transportRequired,
-      };
-
-      await workers.create(newWorker);
+        default_area: formData.default_area,
+        transport_required: formData.transport_required
+      });
 
       toast({
         title: "Success",
@@ -63,6 +61,7 @@ const AddWorker = () => {
 
       navigate("/dashboard");
     } catch (error: any) {
+      console.error("Error adding worker:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to add worker",
@@ -117,11 +116,11 @@ const AddWorker = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="staffId">Staff ID *</Label>
+              <Label htmlFor="staff_id">Staff ID *</Label>
               <Input
-                id="staffId"
-                value={formData.staffId}
-                onChange={(e) => setFormData(prev => ({ ...prev, staffId: e.target.value }))}
+                id="staff_id"
+                value={formData.staff_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, staff_id: e.target.value }))}
                 placeholder="Enter staff ID"
                 className="w-full"
                 required
@@ -151,8 +150,8 @@ const AddWorker = () => {
             <div className="space-y-2">
               <Label htmlFor="area">Area *</Label>
               <Select
-                value={formData.defaultArea}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, defaultArea: value }))}
+                value={formData.default_area}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, default_area: value }))}
                 required
               >
                 <SelectTrigger>
@@ -171,8 +170,8 @@ const AddWorker = () => {
             <div className="space-y-2">
               <Label htmlFor="transport">Transport Required</Label>
               <Select
-                value={formData.transportRequired ? "yes" : "no"}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, transportRequired: value === "yes" }))}
+                value={formData.transport_required ? "yes" : "no"}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, transport_required: value === "yes" }))}
               >
                 <SelectTrigger>
                   <SelectValue />

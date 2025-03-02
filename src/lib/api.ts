@@ -65,7 +65,13 @@ export const workers = {
     grade: string;
     default_area: string;
     transport_required: boolean;
-  }) => apiCall("/workers", { method: "POST", body: data }),
+  }) => {
+    console.log("Creating worker with data:", data); // Debug log
+    return apiCall("/workers", { 
+      method: "POST", 
+      body: data 
+    });
+  },
 };
 
 
