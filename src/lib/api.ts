@@ -66,10 +66,18 @@ export const workers = {
     default_area: string;
     transport_required: boolean;
   }) => {
-    console.log("Creating worker with data:", data); // Debug log
+    // Transform the data to match backend expectations
+    const transformedData = {
+      name: data.name,
+      staffId: data.staff_id,
+      grade: data.grade,
+      defaultArea: data.default_area,
+      transportRequired: data.transport_required
+    };
+    console.log("Creating worker with transformed data:", transformedData);
     return apiCall("/workers", { 
       method: "POST", 
-      body: data 
+      body: transformedData 
     });
   },
 };
