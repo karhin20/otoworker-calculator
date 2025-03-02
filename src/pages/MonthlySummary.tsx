@@ -27,7 +27,9 @@ const MonthlySummary = () => {
       setLoading(true);
       try {
         const data = await overtime.getMonthlySummary(selectedMonth, selectedYear);
-        setSummary(data);
+        // Sort the summary data alphabetically by worker name
+        const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
+        setSummary(sortedData);
       } catch (error) {
         console.error("Failed to fetch summary:", error);
       } finally {

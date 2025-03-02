@@ -50,7 +50,9 @@ const WorkerDetails = () => {
           selectedMonth,
           selectedYear
         );
-        setDetails(data);
+        // Sort the details by date in ascending order
+        const sortedData = data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        setDetails(sortedData);
       } catch (error) {
         console.error("Failed to fetch details:", error);
       } finally {
