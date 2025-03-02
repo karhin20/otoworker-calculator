@@ -15,6 +15,7 @@ const Index = () => {
   const [loading, setLoading] = useState(false);
   const [currentMonth] = useState(new Date().getMonth() + 1);
   const [currentYear] = useState(new Date().getFullYear());
+  const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
 
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -48,8 +49,16 @@ const Index = () => {
     fetchCurrentMonthSummary();
   }, [currentMonth, currentYear]);
 
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      setUser(JSON.parse(userStr));
+    }
+  }, []);
+
   const handleSignOut = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/");
   };
 
@@ -140,20 +149,30 @@ const Index = () => {
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Overtime, Transportation and Risk Management System
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              Welcome to the Overtime, Transportation and Risk Management System
             </h1>
-            <p className="mt-4 text-lg text-gray-500">
-              Manage worker overtime and transportation costs
-            </p>
+            {user ? (
+              <p className="mt-2 text-lg text-gray-600">
+                Hello, {user.name}! You are logged in as {user.grade} ({user.staffId}).
+              </p>
+            ) : (
+              <p className="mt-2 text-lg text-gray-600">
+                Please log in to access your details.
+              </p>
+            )}
           </div>
-          <Button
-            variant="outline"
-            onClick={handleSignOut}
-          >
+          <Button variant="outline" onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" /> Sign Out
           </Button>
         </div>
+
+        <Card className="p-6">
+          {/* Add any additional content or components here */}
+          <p className="text-gray-700">
+            Use the navigation to access worker details, monthly summaries, and more.
+          </p>
+        </Card>
 
         <Card className="p-4 bg-white shadow-sm">
           <nav className="flex space-x-4">

@@ -142,7 +142,7 @@ const WorkerDetails = () => {
             </h1>
             {user && (
               <p className="mt-2 text-lg text-gray-600">
-                Welcome, {user.name} ({user.staffId}) - {user.grade}
+                Hello, {user.name} ({user.staffId}) - {user.grade}
               </p>
             )}
           </div>

@@ -38,7 +38,7 @@ export const AREAS: Area[] = [
   { name: "Dome", rate: 50.00 },
   { name: "Haatso", rate: 45.00 },
   { name: "Kasoa", rate: 55.00 },
-  { name: "Madina UN", rate: 45.00 },
+  { name: "Madina UN", rate: 50.00 },
   { name: "Nima", rate: 45.00 },
   { name: "Pokuase", rate: 70.00 },
   { name: "Sakumono Estates", rate: 90.00 },
