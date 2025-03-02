@@ -9,7 +9,6 @@ import { overtime } from "@/lib/api";
 import { WorkerSummary } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { toast } from "@/hooks/use-toast";
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
