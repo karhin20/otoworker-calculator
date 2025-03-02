@@ -141,7 +141,7 @@ const Index = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Overtime & Tranportation Fee Calculator
+              Overtime, Transportation and Risk Management System
             </h1>
             <p className="mt-4 text-lg text-gray-500">
               Manage worker overtime and transportation costs

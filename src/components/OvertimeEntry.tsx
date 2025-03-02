@@ -173,7 +173,7 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
                   )}
                   onClick={() => setIsCalendarOpen(true)}
                 >
-                  <span>Pick a date</span>
+                  <span>Select date</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
