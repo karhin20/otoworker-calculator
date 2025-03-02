@@ -22,6 +22,9 @@ export async function apiCall(endpoint: string, options: ApiOptions = {}) {
   if (requiresAuth) {
     const token = localStorage.getItem("token");
     if (!token) {
+      // Clear user data and redirect to login if token is missing
+      localStorage.removeItem("user");
+      window.location.href = "/signin";
       throw new Error("No authentication token found");
     }
     headers["Authorization"] = `Bearer ${token}`;
@@ -33,6 +36,14 @@ export async function apiCall(endpoint: string, options: ApiOptions = {}) {
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
+
+    if (response.status === 401) {
+      // Token expired or invalid, clear storage and redirect to login
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/signin";
+      throw new Error("Session expired. Please sign in again.");
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

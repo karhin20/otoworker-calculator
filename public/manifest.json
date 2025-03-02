@@ -1,7 +1,7 @@
 {
-  "name": "Overtime Calculator",
-  "short_name": "OT Calc",
-  "description": "Worker overtime and transportation calculator",
+  "name": "Overtime, Transportation and Risk Management System",
+  "short_name": "OTRMS",
+  "description": "Overtime, Transportation and Risk Management System",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

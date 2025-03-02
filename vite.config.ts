@@ -43,9 +43,9 @@ export default defineConfig({
         clientsClaim: true
       },
       manifest: {
-        name: 'Overtime Calculator',
-        short_name: 'OT Calc',
-        description: 'Worker overtime and transportation calculator',
+        name: 'OTRM System',
+        short_name: 'OTRMS',
+        description: 'Overtime, Transportation and Risk Management System',
         theme_color: '#000000',
         background_color: '#ffffff',
         display: 'standalone',

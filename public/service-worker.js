@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ot-calculator-v1';
+const CACHE_NAME = 'ot-calculator-v2';
 const RUNTIME = 'runtime';
 
 const PRECACHE_URLS = [
