@@ -3,9 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { LogOut, Download } from "lucide-react";
 import { overtime } from "@/lib/api";
 import { WorkerSummary } from "@/types";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { toast } from "@/hooks/use-toast";
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
@@ -13,6 +17,7 @@ const MonthlySummary = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [summary, setSummary] = useState<WorkerSummary[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
 
   useEffect(() => {
@@ -39,6 +44,39 @@ const MonthlySummary = () => {
 
     fetchSummary();
   }, [selectedMonth, selectedYear]);
+
+  // Add keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Alt + N to focus search
+      if (e.altKey && e.key === 'n') {
+        const searchInput = document.getElementById('summary-search');
+        if (searchInput) searchInput.focus();
+      }
+      // Alt + B to go back to dashboard
+      if (e.altKey && e.key === 'b') {
+        navigate('/dashboard');
+      }
+      // Alt + O to export overtime data
+      if (e.altKey && e.key === 'o') {
+        exportData('overtime');
+      }
+      // Alt + T to export transport data
+      if (e.altKey && e.key === 't') {
+        exportData('transport');
+      }
+      // Alt + Left/Right to change months
+      if (e.altKey && e.key === 'ArrowLeft') {
+        setSelectedMonth(prev => prev > 1 ? prev - 1 : 12);
+      }
+      if (e.altKey && e.key === 'ArrowRight') {
+        setSelectedMonth(prev => prev < 12 ? prev + 1 : 1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [navigate]);
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
@@ -108,178 +146,205 @@ const MonthlySummary = () => {
     document.body.removeChild(link);
   };
 
+  // Filter summary data based on search query
+  const filteredSummary = summary.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.grade.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              Monthly Summary
-            </h1>
-            {user && (
-              <p className="mt-2 text-lg text-gray-600">
-                Hello, {user.name} ({user.staffId}) - {user.grade}
-              </p>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleSignOut}
-          >
-            <LogOut className="mr-2 h-4 w-4" /> Sign Out
-          </Button>
-        </div>
-
-        <Card className="p-6">
-          <div className="flex gap-4 mb-6">
-            <div className="w-48">
-              <Select
-                value={selectedMonth.toString()}
-                onValueChange={(value) => setSelectedMonth(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value.toString()}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-32">
-              <Select
-                value={selectedYear.toString()}
-                onValueChange={(value) => setSelectedYear(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                Monthly Summary
+              </h1>
+              {user && (
+                <p className="mt-2 text-lg text-gray-600">
+                  Hello, {user.name} ({user.staffId}) - {user.grade}
+                </p>
+              )}
             </div>
             <Button
               variant="outline"
-              onClick={() => navigate("/dashboard")}
+              onClick={handleSignOut}
             >
-              Back to Dashboard
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/worker-details")}
-            >
-              Worker Details
+              <LogOut className="mr-2 h-4 w-4" /> Sign Out
             </Button>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Card className="p-6">
+            <div className="flex gap-4 mb-6">
+              <div className="w-48">
+                <Select
+                  value={selectedMonth.toString()}
+                  onValueChange={(value) => setSelectedMonth(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month) => (
+                      <SelectItem key={month.value} value={month.value.toString()}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-32">
+                <Select
+                  value={selectedYear.toString()}
+                  onValueChange={(value) => setSelectedYear(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Input
+                  id="summary-search"
+                  placeholder="Search by name, staff ID, or grade... (Alt+N)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+                title="Back to Dashboard (Alt+B)"
+              >
+                Back to Dashboard
+              </Button>
             </div>
-          ) : (
-            <div className="relative w-full overflow-auto">
-              <div className="overflow-x-auto border rounded-lg">
-                <div className="inline-block min-w-full align-middle">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Worker
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Staff ID
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Grade
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category A Hours
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category C Hours
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total Days
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Transport Amount
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {summary.map((item) => (
-                        <tr key={item.worker_id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {item.name}
+
+            {loading ? (
+              <LoadingSkeleton rows={5} columns={7} />
+            ) : (
+              <div className="relative w-full overflow-auto">
+                <div className="overflow-x-auto border rounded-lg">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Worker
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Staff ID
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Grade
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category A Hours
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category C Hours
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total Days
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Transport Amount
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredSummary.map((item) => (
+                          <tr key={item.worker_id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {item.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {item.staff_id}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {item.grade}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {item.category_a_hours.toFixed(2)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {item.category_c_hours.toFixed(2)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {item.transportation_days}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              ₵{(item.transportation_cost || 0).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-gray-50 font-medium">
+                          <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            Monthly Totals
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {item.staff_id}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {calculateTotals().totalCategoryA.toFixed(2)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {item.grade}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {calculateTotals().totalCategoryC.toFixed(2)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {item.category_a_hours.toFixed(2)}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {item.category_c_hours.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {item.transportation_days}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            ₵{(item.transportation_cost || 0).toFixed(2)}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ₵{calculateTotals().totalTransport.toFixed(2)}
                           </td>
                         </tr>
-                      ))}
-                      <tr className="bg-gray-50 font-medium">
-                        <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          Monthly Totals
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {calculateTotals().totalCategoryA.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {calculateTotals().totalCategoryC.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ₵{calculateTotals().totalTransport.toFixed(2)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="mt-4 flex justify-end space-x-4">
-            <Button
-              onClick={() => exportData('overtime')}
-              variant="outline"
-            >
-              Export Overtime Data
-            </Button>
-            <Button
-              onClick={() => exportData('transport')}
-              variant="outline"
-            >
-              Export Transport Data
-            </Button>
+            <div className="mt-4 flex justify-end space-x-4">
+              <Button
+                onClick={() => exportData('overtime')}
+                variant="outline"
+                title="Export Overtime Data (Alt+O)"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export Overtime
+              </Button>
+              <Button
+                onClick={() => exportData('transport')}
+                variant="outline"
+                title="Export Transport Data (Alt+T)"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export Transport
+              </Button>
+            </div>
+          </Card>
+
+          {/* Add keyboard shortcuts help */}
+          <div className="mt-4 text-sm text-gray-500">
+            <p className="font-medium">Keyboard Shortcuts:</p>
+            <ul className="mt-2 space-y-1">
+              <li>Alt + N: Focus search</li>
+              <li>Alt + B: Back to dashboard</li>
+              <li>Alt + O: Export overtime data</li>
+              <li>Alt + T: Export transport data</li>
+              <li>Alt + ←/→: Previous/Next month</li>
+            </ul>
           </div>
-        </Card>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 };
 
