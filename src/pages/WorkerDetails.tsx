@@ -29,7 +29,7 @@ const WorkerDetails = () => {
     const fetchWorkers = async () => {
       try {
         const data = await workers.getAll();
-        setWorkersList(data);
+        setWorkersList(data.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error) {
         console.error("Failed to fetch workers:", error);
       }
