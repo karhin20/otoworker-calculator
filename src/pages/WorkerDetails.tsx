@@ -7,7 +7,6 @@ import { LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { workers, overtime } from "@/lib/api";
 import { Worker, WorkerDetail } from "@/types";
-import { Input } from "@/components/ui/input";
 
 const WorkerDetails = () => {
   const navigate = useNavigate();
@@ -17,7 +16,6 @@ const WorkerDetails = () => {
   const [details, setDetails] = useState<WorkerDetail[]>([]);
   const [workersList, setWorkersList] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
 
   useEffect(() => {
@@ -64,31 +62,6 @@ const WorkerDetails = () => {
 
     fetchDetails();
   }, [selectedWorker, selectedMonth, selectedYear]);
-
-  // Filter workers list based on search query
-  const filteredWorkers = workersList.filter(worker =>
-    worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    worker.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    worker.grade.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Add keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Alt + N to focus search
-      if (e.altKey && e.key === 'n') {
-        const searchInput = document.getElementById('worker-search');
-        if (searchInput) searchInput.focus();
-      }
-      // Alt + B to go back to dashboard
-      if (e.altKey && e.key === 'b') {
-        navigate('/dashboard');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [navigate]);
 
   const months = [
     { value: 1, label: "January" },
@@ -183,7 +156,35 @@ const WorkerDetails = () => {
 
         <Card className="p-6">
           <div className="flex gap-4 mb-6">
-            <div className="w-48">
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+              Back to Dashboard
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/monthly-summary")}>
+              Monthly Summary
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="text-lg font-medium mb-4">Select Worker</h3>
+              <Select
+                value={selectedWorker}
+                onValueChange={setSelectedWorker}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a worker" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workersList.map((worker) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium mb-4">Select Month</h3>
               <Select
                 value={selectedMonth.toString()}
                 onValueChange={(value) => setSelectedMonth(parseInt(value))}
@@ -200,7 +201,9 @@ const WorkerDetails = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-32">
+
+            <div>
+              <h3 className="text-lg font-medium mb-4">Select Year</h3>
               <Select
                 value={selectedYear.toString()}
                 onValueChange={(value) => setSelectedYear(parseInt(value))}
@@ -217,39 +220,6 @@ const WorkerDetails = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-64">
-              <Select
-                value={selectedWorker}
-                onValueChange={setSelectedWorker}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select worker" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredWorkers.map((worker) => (
-                    <SelectItem key={worker.id} value={worker.id}>
-                      {worker.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1">
-              <Input
-                id="worker-search"
-                placeholder="Search workers by name, staff ID, or grade... (Alt+N)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/dashboard")}
-              title="Back to Dashboard (Alt+B)"
-            >
-              Back to Dashboard
-            </Button>
           </div>
 
           <div className="mt-8">

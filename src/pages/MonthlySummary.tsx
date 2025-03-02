@@ -9,6 +9,7 @@ import { overtime } from "@/lib/api";
 import { WorkerSummary } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { toast } from "@/hooks/use-toast";
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
@@ -43,39 +44,6 @@ const MonthlySummary = () => {
 
     fetchSummary();
   }, [selectedMonth, selectedYear]);
-
-  // Add keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Alt + N to focus search
-      if (e.altKey && e.key === 'n') {
-        const searchInput = document.getElementById('summary-search');
-        if (searchInput) searchInput.focus();
-      }
-      // Alt + B to go back to dashboard
-      if (e.altKey && e.key === 'b') {
-        navigate('/dashboard');
-      }
-      // Alt + O to export overtime data
-      if (e.altKey && e.key === 'o') {
-        exportData('overtime');
-      }
-      // Alt + T to export transport data
-      if (e.altKey && e.key === 't') {
-        exportData('transport');
-      }
-      // Alt + Left/Right to change months
-      if (e.altKey && e.key === 'ArrowLeft') {
-        setSelectedMonth(prev => prev > 1 ? prev - 1 : 12);
-      }
-      if (e.altKey && e.key === 'ArrowRight') {
-        setSelectedMonth(prev => prev < 12 ? prev + 1 : 1);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [navigate]);
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
@@ -116,33 +84,51 @@ const MonthlySummary = () => {
   };
 
   const exportData = (type: 'overtime' | 'transport') => {
-    const totals = calculateTotals();
-    let csvContent = '';
-    const monthYear = `${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}`;
+    try {
+      const totals = calculateTotals();
+      let csvContent = '';
+      const monthYear = `${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}`;
+      const fileName = `${type}_summary_${monthYear}.csv`;
 
-    if (type === 'overtime') {
-      csvContent = 'Name,Staff ID,Grade,Category A Hours,Category C Hours\n';
-      summary.forEach((row) => {
-        csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},${row.category_c_hours.toFixed(2)}\n`;
+      if (type === 'overtime') {
+        csvContent = 'Name,Staff ID,Grade,Category A Hours,Category C Hours\n';
+        summary.forEach((row) => {
+          csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},${row.category_c_hours.toFixed(2)}\n`;
+        });
+        csvContent += `\nTotals,,,${totals.totalCategoryA.toFixed(2)},${totals.totalCategoryC.toFixed(2)}\n`;
+      } else {
+        csvContent = 'Name,Staff ID,Grade,Total Days,Transport Cost\n';
+        summary.forEach((row) => {
+          csvContent += `${row.name},${row.staff_id},${row.grade},${row.transportation_days},${row.transportation_cost.toFixed(2)}\n`;
+        });
+        csvContent += `\nTotals,,,,${totals.totalTransport.toFixed(2)}\n`;
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Show success toast
+      toast({
+        title: "Export Successful",
+        description: `${type === 'overtime' ? 'Overtime' : 'Transport'} data has been exported to ${fileName}`,
+        variant: "default",
       });
-      csvContent += `\nTotals,,,${totals.totalCategoryA.toFixed(2)},${totals.totalCategoryC.toFixed(2)}\n`;
-    } else {
-      csvContent = 'Name,Staff ID,Grade,Total Days,Transport Cost\n';
-      summary.forEach((row) => {
-        csvContent += `${row.name},${row.staff_id},${row.grade},${row.transportation_days},${row.transportation_cost.toFixed(2)}\n`;
+    } catch (error) {
+      // Show error toast if export fails
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting the data. Please try again.",
+        variant: "destructive",
       });
-      csvContent += `\nTotals,,,,${totals.totalTransport.toFixed(2)}\n`;
+      console.error("Export error:", error);
     }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${type}_summary_${monthYear}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   // Filter summary data based on search query
@@ -214,7 +200,7 @@ const MonthlySummary = () => {
               <div className="flex-1">
                 <Input
                   id="summary-search"
-                  placeholder="Search by name, staff ID, or grade... (Alt+N)"
+                  placeholder="Search by name, staff ID, or grade..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full"
@@ -223,7 +209,6 @@ const MonthlySummary = () => {
               <Button
                 variant="outline"
                 onClick={() => navigate("/dashboard")}
-                title="Back to Dashboard (Alt+B)"
               >
                 Back to Dashboard
               </Button>
@@ -314,7 +299,6 @@ const MonthlySummary = () => {
               <Button
                 onClick={() => exportData('overtime')}
                 variant="outline"
-                title="Export Overtime Data (Alt+O)"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export Overtime
@@ -322,25 +306,12 @@ const MonthlySummary = () => {
               <Button
                 onClick={() => exportData('transport')}
                 variant="outline"
-                title="Export Transport Data (Alt+T)"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export Transport
               </Button>
             </div>
           </Card>
-
-          {/* Add keyboard shortcuts help */}
-          <div className="mt-4 text-sm text-gray-500">
-            <p className="font-medium">Keyboard Shortcuts:</p>
-            <ul className="mt-2 space-y-1">
-              <li>Alt + N: Focus search</li>
-              <li>Alt + B: Back to dashboard</li>
-              <li>Alt + O: Export overtime data</li>
-              <li>Alt + T: Export transport data</li>
-              <li>Alt + ←/→: Previous/Next month</li>
-            </ul>
-          </div>
         </div>
       </div>
     </ErrorBoundary>

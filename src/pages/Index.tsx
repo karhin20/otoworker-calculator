@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Plus, Calendar, Users, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { workers as workersApi, overtime } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -93,15 +94,27 @@ const Index = () => {
         transportation_cost: entryData.transportation ? area?.rate || 0 : undefined
       };
 
-
       // Submit the entry with the transportation cost
       await overtime.create(dataToSubmit);
       
+      // Show success toast
+      toast({
+        title: "Entry Added Successfully",
+        description: `Overtime entry for ${worker.name} has been recorded for ${format(new Date(entryData.date), 'MMM dd, yyyy')}.`,
+        variant: "default",
+      });
+
       // Refresh the summary data after adding new entry
       const newSummaryData = await overtime.getMonthlySummary(currentMonth, currentYear);
       setSummaryData(newSummaryData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding entry:", error);
+      // Show error toast
+      toast({
+        title: "Error Adding Entry",
+        description: error.message || "Failed to add overtime entry. Please try again.",
+        variant: "destructive",
+      });
       throw error;
     }
   };
