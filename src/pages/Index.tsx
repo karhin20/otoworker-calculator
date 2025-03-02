@@ -22,7 +22,8 @@ const Index = () => {
       setLoading(true);
       try {
         const data = await workersApi.getAll();
-        setWorkers(data.sort((a, b) => a.name.localeCompare(b.name)));
+        const sortWorkers = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+        setWorkers(data.sort(sortWorkers));
       } catch (error) {
         console.error("Failed to fetch workers:", error);
       } finally {
