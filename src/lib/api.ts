@@ -74,7 +74,7 @@ export const workers = {
       defaultArea: data.default_area,
       transportRequired: data.transport_required
     };
-    console.log("Creating worker with transformed data:", transformedData);
+    console.log("Creating worker with data:", transformedData);
     return apiCall("/workers", { 
       method: "POST", 
       body: transformedData 
