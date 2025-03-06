@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Grade } from "@/types";
-import { admin } from "@/lib/api"; // Import the admin API utility
+import { admin } from "@/lib/api"; 
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ const SignUp = () => {
     setLoading(true);
 
     try {
-      console.log("Submitting form data:", formData); 
+      console.log("Submitting form data"); 
 
       const data = await admin.signUp({
         email: formData.email,
@@ -72,7 +72,7 @@ const SignUp = () => {
       // Redirect to dashboard
       navigate("/dashboard");
     } catch (err: any) {
-      console.error("Signup error:", err); // Debug log
+      console.error("Signup error:", err); 
       setError(err.message);
     } finally {
       setLoading(false);

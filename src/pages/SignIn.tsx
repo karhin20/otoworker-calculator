@@ -21,12 +21,9 @@ const SignIn = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    console.log("Starting sign in process..."); // Debug log
 
     try {
-      console.log("Attempting to sign in with:", { email: formData.email }); // Debug log (omit password)
       const data = await admin.signIn(formData);
-      console.log("Sign in successful, received data:", data); // Debug log
       
       // Store the token and user info
       localStorage.setItem("token", data.token);
@@ -35,7 +32,6 @@ const SignIn = () => {
       const expiryDate = new Date();
       expiryDate.setHours(expiryDate.getHours() + 24);  
       localStorage.setItem("tokenExpiry", expiryDate.toISOString());
-      console.log("Token stored with expiry:", expiryDate.toISOString()); // Debug log
 
       localStorage.setItem("user", JSON.stringify({
         name: data.user.name,
@@ -44,7 +40,6 @@ const SignIn = () => {
       }));
       
       // Redirect to dashboard
-      console.log("Redirecting to dashboard..."); // Debug log
       navigate("/dashboard");
     } catch (err: any) {
       console.error("Sign in error:", err); // Enhanced error logging

@@ -53,13 +53,12 @@ export const checkTokenAndRedirect = (navigate?: (path: string) => void): boolea
  * This should be called when the application first loads.
  */
 export const initializeAuth = (): void => {
-  console.log("Initializing auth state...");
+
   const token = localStorage.getItem("token");
   const tokenExpiry = localStorage.getItem("tokenExpiry");
 
   // If we have a token without expiry, set one
   if (token && !tokenExpiry) {
-    console.log("Found token without expiry, setting one");
     const newExpiry = new Date();
     newExpiry.setHours(newExpiry.getHours() + 24);
     localStorage.setItem("tokenExpiry", newExpiry.toISOString());
@@ -67,7 +66,6 @@ export const initializeAuth = (): void => {
   
   // If we have an expired token, clear auth data
   if (token && tokenExpiry && new Date(tokenExpiry) < new Date()) {
-    console.log("Found expired token, clearing auth data");
     clearAuthData();
   }
   
