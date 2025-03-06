@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Input } from "@/components/ui/input";
+import { getAndClearNotification } from "@/utils/notifications";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Index = () => {
   const [currentYear] = useState(new Date().getFullYear());
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -73,6 +75,18 @@ const Index = () => {
     }
   }, []);
 
+  // Check for notifications on component mount
+  useEffect(() => {
+    const notification = getAndClearNotification();
+    if (notification) {
+      toast({
+        title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
+        description: notification.message,
+        variant: notification.type === 'error' ? 'destructive' : 'default',
+      });
+    }
+  }, []);
+
   const handleSignOut = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -91,44 +105,24 @@ const Index = () => {
     transportation_cost?: number;
   }) => {
     try {
-      // Find the worker to get their default_area
-      const worker = workers.find(w => w.id === entryData.worker_id);
-      if (!worker) throw new Error("Worker not found");
-
-      // Find the area rate from AREAS constant
-      const area = AREAS.find(a => a.name === worker.default_area);
-      if (!area && entryData.transportation) {
-        throw new Error("Area rate not found for worker's default area");
-      }
-
-      // If transportation is true, set the transportation_cost from area rate
-      const dataToSubmit = {
-        ...entryData,
-        transportation_cost: entryData.transportation ? area?.rate || 0 : undefined
-      };
-
-      // Submit the entry with the transportation cost
-      await overtime.create(dataToSubmit);
+      setIsSubmitting(true);
+      await overtime.create(entryData);
       
-      // Show success toast
-      toast({
-        title: "Entry Added Successfully",
-        description: `Overtime entry for ${worker.name} has been recorded for ${format(new Date(entryData.date), 'MMM dd, yyyy')}.`,
-        variant: "default",
+      // Instead of showing toast here, set a notification for the next page
+      import("@/utils/notifications").then(({ notifySuccess }) => {
+        notifySuccess("Overtime entry added successfully!");
       });
-
-      // Refresh the summary data after adding new entry
-      const newSummaryData = await overtime.getMonthlySummary(currentMonth, currentYear);
-      setSummaryData(newSummaryData);
-    } catch (error: any) {
-      console.error("Error adding entry:", error);
-      // Show error toast
+      
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Failed to add entry:", error);
       toast({
-        title: "Error Adding Entry",
-        description: error.message || "Failed to add overtime entry. Please try again.",
+        title: "Error",
+        description: "Failed to add overtime entry. Please try again.",
         variant: "destructive",
       });
-      throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

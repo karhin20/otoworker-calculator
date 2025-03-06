@@ -7,6 +7,8 @@ import { LogOut } from "lucide-react";
 import { format } from "date-fns"; // Ensure this import is present
 import { workers, overtime } from "@/lib/api";
 import { Worker, WorkerDetail } from "@/types";
+import { getAndClearNotification } from "@/utils/notifications";
+import { toast } from "@/hooks/use-toast";
 
 const WorkerDetails = () => {
   const navigate = useNavigate();
@@ -62,6 +64,18 @@ const WorkerDetails = () => {
 
     fetchDetails();
   }, [selectedWorker, selectedMonth, selectedYear]);
+
+  // Check for notifications on component mount
+  useEffect(() => {
+    const notification = getAndClearNotification();
+    if (notification) {
+      toast({
+        title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
+        description: notification.message,
+        variant: notification.type === 'error' ? 'destructive' : 'default',
+      });
+    }
+  }, []);
 
   const months = [
     { value: 1, label: "January" },

@@ -10,6 +10,7 @@ import { WorkerSummary } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { toast } from "@/hooks/use-toast";
+import { getAndClearNotification } from "@/utils/notifications";
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
@@ -44,6 +45,18 @@ const MonthlySummary = () => {
 
     fetchSummary();
   }, [selectedMonth, selectedYear]);
+
+  // Check for notifications on component mount
+  useEffect(() => {
+    const notification = getAndClearNotification();
+    if (notification) {
+      toast({
+        title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
+        description: notification.message,
+        variant: notification.type === 'error' ? 'destructive' : 'default',
+      });
+    }
+  }, []);
 
   const handleSignOut = () => {
     localStorage.removeItem("token");

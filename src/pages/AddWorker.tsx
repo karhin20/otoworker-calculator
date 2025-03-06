@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AREAS, Grade } from "@/types";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { workers } from "@/lib/api";
+import { getAndClearNotification, notifySuccess } from "@/utils/notifications";
 
 const GRADES: Grade[] = [
   "Artisan (P/F)",
@@ -33,6 +34,18 @@ const AddWorker = () => {
     transport_required: true,
   });
 
+  // Check for notifications on component mount
+  useEffect(() => {
+    const notification = getAndClearNotification();
+    if (notification) {
+      toast({
+        title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
+        description: notification.message,
+        variant: notification.type === 'error' ? 'destructive' : 'default',
+      });
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.staff_id || !formData.grade || !formData.default_area) {
@@ -46,34 +59,12 @@ const AddWorker = () => {
 
     setLoading(true);
     try {
-      await workers.create({
-        name: formData.name,
-        staff_id: formData.staff_id,
-        grade: formData.grade,
-        default_area: formData.default_area,
-        transport_required: formData.transport_required
-      });
-
-      toast({
-        title: "Success",
-        description: `Worker ${formData.name} has been added successfully`,
-        variant: "default",
-      });
-
-      // Reset form and navigate after successful addition
-      setFormData({
-        name: "",
-        staff_id: "",
-        grade: "" as Grade,
-        default_area: "",
-        transport_required: true,
-      });
-
-      // Short delay before navigation to ensure toast is visible
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1500);
-
+      await workers.create(formData);
+      
+      // Instead of showing toast here, set a notification for the next page
+      notifySuccess(`Worker ${formData.name} has been added successfully!`);
+      
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Error",
