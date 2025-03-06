@@ -4,7 +4,7 @@ import { Worker, WorkerSummary } from "@/types";
 import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Calendar, Users, LogOut, Download } from "lucide-react";
+import { Plus, Calendar, Users, LogOut, Download, BarChart } from "lucide-react";
 import { format } from "date-fns";
 import { workers as workersApi, overtime } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -251,6 +251,12 @@ const Index = () => {
                 onClick={() => navigate("/worker-details")}
               >
                 <Users className="mr-2 h-4 w-4" /> Worker Details
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/analytics")}
+              >
+                <BarChart className="mr-2 h-4 w-4" /> Analytics
               </Button>
             </nav>
           </Card>

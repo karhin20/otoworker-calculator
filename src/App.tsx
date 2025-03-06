@@ -7,6 +7,7 @@ import SignUp from "@/pages/SignUp";
 import Index from "@/pages/Index";
 import WorkerDetails from "@/pages/WorkerDetails";
 import MonthlySummary from "@/pages/MonthlySummary";
+import Analytics from "@/pages/Analytics";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AddWorker from "./pages/AddWorker";
 
@@ -53,6 +54,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <MonthlySummary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <Analytics />
                 </ProtectedRoute>
               }
             />
