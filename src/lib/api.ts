@@ -2,7 +2,7 @@ import { Grade, WorkerDetail, WorkerSummary } from "@/types";
 import { isOnline, queueOfflineRequest, getOfflineData, cacheDataForOffline } from "@/utils/offline";
 import { clearAuthData } from "@/utils/auth";
 
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = "https://overtime-transport-backend.vercel.app/api";
 
 interface ApiOptions {
   method?: string;
