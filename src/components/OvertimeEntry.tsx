@@ -25,9 +25,10 @@ interface OvertimeEntryProps {
     transportation: boolean;
     transportation_cost?: number;
   }) => Promise<void>;
+  isSubmitting?: boolean;
 }
 
-export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
+export const OvertimeEntry = ({ workers, onSubmit, isSubmitting: externalIsSubmitting }: OvertimeEntryProps) => {
   const [selectedWorker, setSelectedWorker] = useState("");
   const [date, setDate] = useState<Date>();
   const [entryTime, setEntryTime] = useState("");
@@ -35,8 +36,11 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
   const [transportation, setTransportation] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [category, setCategory] = useState<"A" | "C">("A");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localIsSubmitting, setLocalIsSubmitting] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+  // Use external isSubmitting state if provided, otherwise use local state
+  const isSubmitting = externalIsSubmitting !== undefined ? externalIsSubmitting : localIsSubmitting;
 
   // Generate time options (00:00 to 23:00)
   const timeOptions = Array.from({ length: 24 }, (_, i) => {
@@ -78,7 +82,7 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
   const handleSubmit = async () => {
     if (!selectedWorker || !date || !entryTime || !exitTime) return;
 
-    setIsSubmitting(true);
+    setLocalIsSubmitting(true);
     const overtimeHours = calculateOvertimeHours();
     const selectedWorkerDetails = workers.find(w => w.id === selectedWorker);
     
@@ -98,12 +102,7 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
 
     try {
       await onSubmit(entryData);
-      toast({
-        title: "Success",
-        description: "Overtime entry has been added successfully.",
-      });
-
-      // Reset form
+      // Reset form - these won't be seen due to navigation, but keeping for completeness
       setSelectedWorker("");
       setDate(undefined);
       setEntryTime("");
@@ -118,7 +117,7 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLocalIsSubmitting(false);
     }
   };
 
@@ -173,7 +172,11 @@ export const OvertimeEntry = ({ workers, onSubmit }: OvertimeEntryProps) => {
                   )}
                   onClick={() => setIsCalendarOpen(true)}
                 >
-                  <span>Select date</span>
+                  {date ? (
+                    format(date, "PPP")
+                  ) : (
+                    <span>Select date</span>
+                  )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">

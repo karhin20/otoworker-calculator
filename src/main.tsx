@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { registerSW } from 'virtual:pwa-register'
+import { initializeAuth } from '@/utils/auth'
+
+// Initialize authentication state
+initializeAuth();
 
 const updateSW = registerSW({
   onNeedRefresh() {

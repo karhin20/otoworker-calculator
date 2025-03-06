@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Grade } from "@/types";
+import { admin } from "@/lib/api"; // Import the admin API utility
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -43,30 +44,25 @@ const SignUp = () => {
     try {
       console.log("Submitting form data:", formData); 
 
-      const response = await fetch("https://overtime-transport-backend.vercel.app/api/admin/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          secretCode: formData.secretCode,
-          name: formData.name,
-          staffId: formData.staffId, 
-          grade: formData.grade
-        }),
+      const data = await admin.signUp({
+        email: formData.email,
+        password: formData.password,
+        secretCode: formData.secretCode,
+        name: formData.name,
+        staffId: formData.staffId, 
+        grade: formData.grade
       });
+      
 
-      const data = await response.json();
-      console.log("Response data:", data); 
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to sign up");
-      }
 
       // Store the token and user info
       localStorage.setItem("token", data.token);
+
+      // Set token expiry (24 hours from now)
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 24);  
+      localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+
       localStorage.setItem("user", JSON.stringify({
         name: data.user.name,
         staffId: data.user.staffId,

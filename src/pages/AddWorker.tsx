@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { workers } from "@/lib/api";
 import { getAndClearNotification, notifySuccess } from "@/utils/notifications";
@@ -23,6 +24,13 @@ const GRADES: Grade[] = [
   "Snr Driver"
 ];
 
+interface FormErrors {
+  name?: string;
+  staff_id?: string;
+  grade?: string;
+  default_area?: string;
+}
+
 const AddWorker = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -33,6 +41,8 @@ const AddWorker = () => {
     default_area: "",
     transport_required: true,
   });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Check for notifications on component mount
   useEffect(() => {
@@ -46,33 +56,100 @@ const AddWorker = () => {
     }
   }, []);
 
+  // Validate form fields
+  const validateField = (name: string, value: string) => {
+    let errorMessage = "";
+    
+    switch (name) {
+      case "name":
+        if (!value.trim()) errorMessage = "Name is required";
+        else if (value.length < 3) errorMessage = "Name must be at least 3 characters";
+        break;
+      case "staff_id":
+        if (!value.trim()) errorMessage = "Staff ID is required";
+        else if (!/^[A-Za-z0-9]+$/.test(value)) errorMessage = "Staff ID must contain only letters and numbers";
+        break;
+      case "grade":
+        if (!value) errorMessage = "Grade is required";
+        break;
+      case "default_area":
+        if (!value) errorMessage = "Default area is required";
+        break;
+    }
+    
+    setErrors(prev => ({ ...prev, [name]: errorMessage }));
+    return !errorMessage;
+  };
+
+  // Handle field blur to mark as touched
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name, formData[name as keyof typeof formData] as string);
+  };
+
+  // Handle input change with validation
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement> | 
+    { target: { name: string; value: string } }
+  ) => {
+    const { name, value } = e.target;
+    
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Validate if the field has been touched
+    if (touched[name]) {
+      validateField(name, value);
+    }
+  };
+
+  // Handle select change
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Validate if the field has been touched
+    if (touched[name]) {
+      validateField(name, value);
+    }
+  };
+
+  // Form submission with validation
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.staff_id || !formData.grade || !formData.default_area) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await workers.create(formData);
-      
-      // Instead of showing toast here, set a notification for the next page
-      notifySuccess(`Worker ${formData.name} has been added successfully!`);
-      
-      navigate("/dashboard");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add worker",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    
+    // Validate all fields
+    const nameValid = validateField("name", formData.name);
+    const staffIdValid = validateField("staff_id", formData.staff_id);
+    const gradeValid = validateField("grade", formData.grade);
+    const areaValid = validateField("default_area", formData.default_area);
+    
+    // Mark all fields as touched
+    setTouched({
+      name: true,
+      staff_id: true,
+      grade: true,
+      default_area: true,
+    });
+    
+    // Submit if valid
+    if (nameValid && staffIdValid && gradeValid && areaValid) {
+      setLoading(true);
+      try {
+        await workers.create(formData);
+        
+        // Instead of showing toast here, set a notification for the next page
+        notifySuccess(`Worker ${formData.name} has been added successfully!`);
+        
+        navigate("/dashboard");
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to add worker, please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -108,37 +185,50 @@ const AddWorker = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="name">Worker Name</Label>
               <Input
                 id="name"
+                name="name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter worker's full name"
-                className="w-full"
-                required
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={errors.name ? "border-red-500" : ""}
+                placeholder="Enter worker name"
               />
+              {touched.name && errors.name && (
+                <p className="text-sm text-red-500">{errors.name}</p>
+              )}
             </div>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="staff_id">Staff ID *</Label>
+              <Label htmlFor="staff_id">Staff ID</Label>
               <Input
                 id="staff_id"
+                name="staff_id"
                 value={formData.staff_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, staff_id: e.target.value }))}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={errors.staff_id ? "border-red-500" : ""}
                 placeholder="Enter staff ID"
-                className="w-full"
-                required
               />
+              {touched.staff_id && errors.staff_id && (
+                <p className="text-sm text-red-500">{errors.staff_id}</p>
+              )}
             </div>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="grade">Grade *</Label>
+              <Label htmlFor="grade">Grade</Label>
               <Select
                 value={formData.grade}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, grade: value as Grade }))}
-                required
+                onValueChange={(value) => handleSelectChange("grade", value)}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setTouched(prev => ({ ...prev, grade: true }));
+                    validateField("grade", formData.grade);
+                  }
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger className={errors.grade ? "border-red-500" : ""}>
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -149,44 +239,50 @@ const AddWorker = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {touched.grade && errors.grade && (
+                <p className="text-sm text-red-500">{errors.grade}</p>
+              )}
             </div>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="area">Area *</Label>
+              <Label htmlFor="default_area">Default Area</Label>
               <Select
                 value={formData.default_area}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, default_area: value }))}
-                required
+                onValueChange={(value) => handleSelectChange("default_area", value)}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setTouched(prev => ({ ...prev, default_area: true }));
+                    validateField("default_area", formData.default_area);
+                  }
+                }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select area" />
+                <SelectTrigger className={errors.default_area ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Select default area" />
                 </SelectTrigger>
                 <SelectContent>
                   {AREAS.map((area) => (
                     <SelectItem key={area.name} value={area.name}>
-                      {area.name} - ₵{area.rate.toFixed(2)}
+                      {area.name} (₵{area.rate.toFixed(2)})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {touched.default_area && errors.default_area && (
+                <p className="text-sm text-red-500">{errors.default_area}</p>
+              )}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="transport">Transport Required</Label>
-              <Select
-                value={formData.transport_required ? "yes" : "no"}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, transport_required: value === "yes" }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                </SelectContent>
-              </Select>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="transport_required"
+                checked={formData.transport_required}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, transport_required: checked }))
+                }
+              />
+              <Label htmlFor="transport_required">Transport Required</Label>
             </div>
-
+            
             <div className="flex gap-4">
               <Button
                 type="button"

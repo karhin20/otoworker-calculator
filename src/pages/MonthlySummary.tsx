@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
+import { FixedSizeList as List } from 'react-window';
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
@@ -84,7 +85,8 @@ const MonthlySummary = () => {
     (_, i) => selectedYear - 2 + i
   );
 
-  const calculateTotals = () => {
+  // Memoize the calculateTotals function
+  const calculateTotals = useCallback(() => {
     return summary.reduce((acc, item) => ({
       totalCategoryA: acc.totalCategoryA + (item.category_a_hours || 0),
       totalCategoryC: acc.totalCategoryC + (item.category_c_hours || 0),
@@ -94,7 +96,49 @@ const MonthlySummary = () => {
       totalCategoryC: 0,
       totalTransport: 0
     });
-  };
+  }, [summary]);
+
+  // Memoize totals
+  const totals = useMemo(() => calculateTotals(), [calculateTotals]);
+
+  // Memoize filtered summary data
+  const filteredSummary = useMemo(() => {
+    return summary.filter(item => 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.grade.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [summary, searchQuery]);
+
+  // Row renderer for virtualized list
+  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
+    if (index >= filteredSummary.length) return null;
+    
+    const summary = filteredSummary[index];
+    
+    return (
+      <div style={style} className="flex divide-x divide-gray-200">
+        <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 w-1/6">
+          {summary.name}
+        </div>
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+          {summary.staff_id}
+        </div>
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+          {summary.grade}
+        </div>
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+          {summary.category_a_hours?.toFixed(2) || "0.00"}
+        </div>
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+          {summary.category_c_hours?.toFixed(2) || "0.00"}
+        </div>
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+          ₵{summary.transportation_cost?.toFixed(2) || "0.00"}
+        </div>
+      </div>
+    );
+  }, [filteredSummary]);
 
   const exportData = (type: 'overtime' | 'transport') => {
     try {
@@ -142,13 +186,6 @@ const MonthlySummary = () => {
       });
     }
   };
-
-  // Filter summary data based on search query
-  const filteredSummary = summary.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.grade.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <ErrorBoundary>
@@ -228,83 +265,64 @@ const MonthlySummary = () => {
 
             {loading ? (
               <LoadingSkeleton rows={5} columns={7} />
-            ) : (
-              <div className="relative w-full overflow-auto">
-                <div className="overflow-x-auto border rounded-lg">
-                  <div className="inline-block min-w-full align-middle">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Worker
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Staff ID
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Grade
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Category A Hours
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Category C Hours
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total Days
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Transport Amount
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredSummary.map((item) => (
-                          <tr key={item.worker_id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {item.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {item.staff_id}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {item.grade}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {item.category_a_hours.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {item.category_c_hours.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {item.transportation_days}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              ₵{(item.transportation_cost || 0).toFixed(2)}
-                            </td>
-                          </tr>
-                        ))}
-                        <tr className="bg-gray-50 font-medium">
-                          <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Monthly Totals
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {calculateTotals().totalCategoryA.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {calculateTotals().totalCategoryC.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ₵{calculateTotals().totalTransport.toFixed(2)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+            ) : filteredSummary.length > 0 ? (
+              <div className="mt-8">
+                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                  {/* Table header */}
+                  <div className="bg-gray-50 flex divide-x divide-gray-200">
+                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Name
+                    </div>
+                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Staff ID
+                    </div>
+                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Grade
+                    </div>
+                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Category A Hours
+                    </div>
+                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Category C Hours
+                    </div>
+                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Transport Cost
+                    </div>
+                  </div>
+                  
+                  {/* Virtualized list */}
+                  <div className="bg-white">
+                    <List
+                      height={400}
+                      itemCount={filteredSummary.length}
+                      itemSize={53} // Adjust based on your row height
+                      width="100%"
+                    >
+                      {Row}
+                    </List>
+                  </div>
+                  
+                  {/* Totals row */}
+                  <div className="bg-gray-50 flex divide-x divide-gray-200 font-medium">
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/2" style={{ gridColumn: 'span 3' }}>
+                      Monthly Totals
+                    </div>
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/6">
+                      {totals.totalCategoryA.toFixed(2)}
+                    </div>
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/6">
+                      {totals.totalCategoryC.toFixed(2)}
+                    </div>
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/6">
+                      ₵{totals.totalTransport.toFixed(2)}
+                    </div>
                   </div>
                 </div>
               </div>
+            ) : (
+              <p className="text-center text-gray-500 py-8">
+                No data available for the selected month
+              </p>
             )}
 
             <div className="mt-4 flex justify-end space-x-4">

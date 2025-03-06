@@ -10,6 +10,16 @@ export const isTokenValid = (): boolean => {
   const token = localStorage.getItem("token");
   const tokenExpiry = localStorage.getItem("tokenExpiry");
   
+  // If token exists but expiry doesn't, assume it's valid
+  // This handles tokens from before we added expiry dates
+  if (token && !tokenExpiry) {
+    // Create a new expiry date for backward compatibility
+    const newExpiry = new Date();
+    newExpiry.setHours(newExpiry.getHours() + 24);
+    localStorage.setItem("tokenExpiry", newExpiry.toISOString());
+    return true;
+  }
+  
   return !!token && !!tokenExpiry && new Date(tokenExpiry) > new Date();
 };
 
@@ -36,4 +46,35 @@ export const checkTokenAndRedirect = (navigate?: (path: string) => void): boolea
   }
   
   return isValid;
+};
+
+/**
+ * Initializes authentication state by checking for and clearing any expired tokens.
+ * This should be called when the application first loads.
+ */
+export const initializeAuth = (): void => {
+  console.log("Initializing auth state...");
+  const token = localStorage.getItem("token");
+  const tokenExpiry = localStorage.getItem("tokenExpiry");
+
+  // If we have a token without expiry, set one
+  if (token && !tokenExpiry) {
+    console.log("Found token without expiry, setting one");
+    const newExpiry = new Date();
+    newExpiry.setHours(newExpiry.getHours() + 24);
+    localStorage.setItem("tokenExpiry", newExpiry.toISOString());
+  }
+  
+  // If we have an expired token, clear auth data
+  if (token && tokenExpiry && new Date(tokenExpiry) < new Date()) {
+    console.log("Found expired token, clearing auth data");
+    clearAuthData();
+  }
+  
+  // Log current auth state
+  if (isTokenValid()) {
+    console.log("Auth initialized: Valid token found");
+  } else {
+    console.log("Auth initialized: No valid token");
+  }
 }; 

@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns"; // Ensure this import is present
 import { workers, overtime } from "@/lib/api";
 import { Worker, WorkerDetail } from "@/types";
 import { getAndClearNotification } from "@/utils/notifications";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 
 const WorkerDetails = () => {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ const WorkerDetails = () => {
   const [workersList, setWorkersList] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -31,8 +34,7 @@ const WorkerDetails = () => {
     const fetchWorkers = async () => {
       try {
         const data = await workers.getAll();
-        const sortWorkers = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
-        setWorkersList(data.sort(sortWorkers));
+        setWorkersList(data);
       } catch (error) {
         console.error("Failed to fetch workers:", error);
       }
@@ -97,7 +99,13 @@ const WorkerDetails = () => {
     (_, i) => selectedYear - 2 + i
   );
 
-  const calculateTotals = () => {
+  // Memoize the workers list sorting
+  const sortedWorkersList = useMemo(() => {
+    return [...workersList].sort((a, b) => a.name.localeCompare(b.name));
+  }, [workersList]);
+
+  // Convert calculateTotals to a memoized callback
+  const calculateTotals = useCallback(() => {
     return details.reduce((acc, detail) => ({
       totalCategoryA: acc.totalCategoryA + (detail.category_a_hours || 0),
       totalCategoryC: acc.totalCategoryC + (detail.category_c_hours || 0),
@@ -107,16 +115,36 @@ const WorkerDetails = () => {
       totalCategoryC: 0,
       totalTransport: 0
     });
-  };
+  }, [details]);
 
-  const exportWorkerDetails = (exportType: 'transportation' | 'overtime') => {
+  // Memoize the calculateTotals function result
+  const totals = useMemo(() => calculateTotals(), [calculateTotals]);
+
+  // Implement pagination
+  const paginatedDetails = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return details.slice(startIndex, startIndex + itemsPerPage);
+  }, [details, currentPage, itemsPerPage]);
+
+  const totalPages = useMemo(() => Math.ceil(details.length / itemsPerPage), [details.length, itemsPerPage]);
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  }, []);
+
+  // Convert exportWorkerDetails to a memoized callback
+  const exportWorkerDetails = useCallback((exportType: 'transportation' | 'overtime') => {
     if (!details.length || !selectedWorker) return;
 
     const worker = workersList.find(w => w.id === selectedWorker);
     if (!worker) return;
 
     const monthName = months.find(m => m.value === selectedMonth)?.label;
-    const totals = calculateTotals();
     
     if (exportType === 'transportation') {
       const fileName = `${worker.name}_${monthName}_${selectedYear}_transportation.csv`;
@@ -199,10 +227,23 @@ const WorkerDetails = () => {
       link.click();
       document.body.removeChild(link);
     }
-  };
+  }, [details, selectedWorker, workersList, selectedMonth, selectedYear, totals]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Keyboard shortcuts for pagination
+    if (e.key === 'ArrowLeft' && currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    } else if (e.key === 'ArrowRight' && currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  }, [currentPage, totalPages, handlePageChange]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div 
+      className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <div>
@@ -240,7 +281,7 @@ const WorkerDetails = () => {
                   <SelectValue placeholder="Select a worker" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workersList.map((worker) => (
+                  {sortedWorkersList.map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.name}
                     </SelectItem>
@@ -290,8 +331,16 @@ const WorkerDetails = () => {
 
           <div className="mt-8">
             {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="space-y-4">
+                <div className="flex flex-col space-y-3">
+                  <Skeleton className="h-8 w-64 mb-4" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+                <TableSkeleton rows={6} columns={7} />
               </div>
             ) : details.length > 0 ? (
               <>
@@ -323,7 +372,7 @@ const WorkerDetails = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {details.map((detail, index) => (
+                      {paginatedDetails.map((detail, index) => (
                         <tr key={index}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {format(new Date(detail.date), "PP")}
@@ -356,13 +405,13 @@ const WorkerDetails = () => {
                           Totals
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {calculateTotals().totalCategoryA.toFixed(2)}
+                          {totals.totalCategoryA.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {calculateTotals().totalCategoryC.toFixed(2)}
+                          {totals.totalCategoryC.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ₵{calculateTotals().totalTransport.toFixed(2)}
+                          ₵{totals.totalTransport.toFixed(2)}
                         </td>
                       </tr>
                     </tbody>
@@ -383,6 +432,79 @@ const WorkerDetails = () => {
                   >
                     Export Overtime
                   </Button>
+                </div>
+                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      aria-label="Previous page"
+                      tabIndex={0}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      aria-label="Next page"
+                      tabIndex={0}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{" "}
+                        <span className="font-medium">{Math.min(currentPage * itemsPerPage, details.length)}</span> of{" "}
+                        <span className="font-medium">{details.length}</span> results
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <Select
+                        value={itemsPerPage.toString()}
+                        onValueChange={handleItemsPerPageChange}
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Rows per page" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10 per page</SelectItem>
+                          <SelectItem value="25">25 per page</SelectItem>
+                          <SelectItem value="50">50 per page</SelectItem>
+                          <SelectItem value="100">100 per page</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex">
+                        <Button
+                          variant="outline"
+                          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                          aria-label="Previous page"
+                          tabIndex={0}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="px-4 py-2">
+                          Page {currentPage} of {totalPages}
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages}
+                          aria-label="Next page"
+                          tabIndex={0}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 text-xs text-gray-500">
+                  <p>Keyboard shortcuts: Left arrow (previous page), Right arrow (next page)</p>
                 </div>
               </>
             ) : (

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Worker, WorkerSummary, AREAS } from "@/types";
+import { Worker, WorkerSummary } from "@/types";
 import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,17 @@ import { toast } from "@/hooks/use-toast";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Input } from "@/components/ui/input";
-import { getAndClearNotification } from "@/utils/notifications";
+import { getAndClearNotification, notifySuccess } from "@/utils/notifications";
+
+const ResponsiveTable = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="overflow-x-auto pb-2 -mx-4 sm:mx-0">
+      <div className="inline-block min-w-full align-middle">
+        {children}
+      </div>
+    </div>
+  );
+};
 
 const Index = () => {
   const navigate = useNavigate();
@@ -93,7 +103,35 @@ const Index = () => {
     navigate("/");
   };
 
-  const handleAddEntry = async (entryData: {
+  // Memoize sorted and filtered workers list
+  const filteredSummary = useMemo(() => {
+    return summaryData
+      .filter((summary) => 
+        summary.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        summary.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        summary.grade.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [summaryData, searchQuery]);
+
+  // Memoize the calculateTotals function
+  const calculateTotals = useCallback(() => {
+    return summaryData.reduce(
+      (acc, item) => ({
+        categoryA: acc.categoryA + (item.category_a_hours || 0),
+        categoryC: acc.categoryC + (item.category_c_hours || 0),
+        transportDays: acc.transportDays + (item.transportation_days || 0),
+        transportCost: acc.transportCost + (item.transportation_cost || 0),
+      }),
+      { categoryA: 0, categoryC: 0, transportDays: 0, transportCost: 0 }
+    );
+  }, [summaryData]);
+
+  // Memoize totals
+  const totals = useMemo(() => calculateTotals(), [calculateTotals]);
+
+  // Convert handleAddEntry to a memoized callback
+  const handleAddEntry = useCallback(async (entryData: {
     worker_id: string;
     date: string;
     entry_time: string;
@@ -108,12 +146,11 @@ const Index = () => {
       setIsSubmitting(true);
       await overtime.create(entryData);
       
-      // Instead of showing toast here, set a notification for the next page
-      import("@/utils/notifications").then(({ notifySuccess }) => {
-        notifySuccess("Overtime entry added successfully!");
-      });
+      // Set the notification
+      notifySuccess("Overtime entry added successfully!");
       
-      navigate("/dashboard");
+      // Force full reload to ensure the notification is displayed
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error("Failed to add entry:", error);
       toast({
@@ -124,23 +161,10 @@ const Index = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const calculateTotals = () => {
-    return summaryData.reduce((acc, item) => ({
-      total_category_a: acc.total_category_a + (item.category_a_hours || 0),
-      total_category_c: acc.total_category_c + (item.category_c_hours || 0),
-      total_transport_cost: acc.total_transport_cost + (item.transportation_cost || 0)
-    }), {
-      total_category_a: 0,
-      total_category_c: 0,
-      total_transport_cost: 0
-    });
-  };
+  }, []);
 
   const exportData = (type: 'overtime' | 'transport') => {
     try {
-      const totals = calculateTotals();
       let csvContent = '';
       const monthYear = format(new Date(), 'MMMM_yyyy');
       const fileName = `${type}_summary_${monthYear}.csv`;
@@ -150,13 +174,13 @@ const Index = () => {
         summaryData.forEach((row) => {
           csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},${row.category_c_hours.toFixed(2)}\n`;
         });
-        csvContent += `\nTotals,,,${totals.total_category_a.toFixed(2)},${totals.total_category_c.toFixed(2)}\n`;
+        csvContent += `\nTotals,,,${totals.categoryA.toFixed(2)},${totals.categoryC.toFixed(2)}\n`;
       } else {
         csvContent = 'Name,Staff ID,Grade,Total Days,Transport Cost\n';
         summaryData.forEach((row) => {
           csvContent += `${row.name},${row.staff_id},${row.grade},${row.transportation_days},${row.transportation_cost.toFixed(2)}\n`;
         });
-        csvContent += `\nTotals,,,,${totals.total_transport_cost.toFixed(2)}\n`;
+        csvContent += `\nTotals,,,,${totals.transportCost.toFixed(2)}\n`;
       }
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -183,13 +207,6 @@ const Index = () => {
       console.error("Export error:", error);
     }
   };
-
-  // Filter summary data based on search query
-  const filteredSummary = summaryData.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.grade.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <ErrorBoundary>
@@ -239,19 +256,32 @@ const Index = () => {
           </Card>
 
           <div className="grid grid-cols-1 gap-8">
-            <OvertimeEntryComponent workers={workers} onSubmit={handleAddEntry} />
+            <OvertimeEntryComponent 
+              workers={workers} 
+              onSubmit={handleAddEntry} 
+              isSubmitting={isSubmitting} 
+            />
           </div>
 
           <Card className="p-6 animate-slideIn">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+                Dashboard
+              </h2>
+              <div className="w-full sm:w-auto max-w-sm">
+                <Input
+                  type="search"
+                  placeholder="Search workers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-medium">Monthly Summary</h3>
               <div className="flex gap-4">
-                <Input
-                  placeholder="Search by name, staff ID, or grade..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64"
-                />
                 <Button
                   onClick={() => exportData('overtime')}
                   variant="outline"
@@ -272,84 +302,81 @@ const Index = () => {
             {loading ? (
               <LoadingSkeleton rows={5} columns={7} />
             ) : (
-              <div className="relative w-full overflow-auto">
-                <div className="overflow-x-auto border rounded-lg">
-                  <div className="inline-block min-w-full align-middle">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Worker
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Staff ID
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Grade
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Category A Hours
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Category C Hours
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total Days
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Transport Amount
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredSummary.map((summary) => (
-                          <tr key={summary.worker_id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {summary.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {summary.staff_id}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {summary.grade}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {summary.category_a_hours.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {summary.category_c_hours.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {summary.transportation_days}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              ₵{summary.transportation_cost?.toFixed(2) || '0.00'}
-                            </td>
-                          </tr>
-                        ))}
-                        {filteredSummary.length > 0 && (
-                          <tr className="bg-gray-50 font-medium">
-                            <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              Monthly Totals
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {calculateTotals().total_category_a.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {calculateTotals().total_category_c.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              ₵{calculateTotals().total_transport_cost.toFixed(2)}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <ResponsiveTable>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Worker
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Staff ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Grade
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category A Hours
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category C Hours
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Days
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Transport Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredSummary.map((summary) => (
+                      <tr key={summary.worker_id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {summary.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {summary.staff_id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {summary.grade}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {summary.category_a_hours.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {summary.category_c_hours.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {summary.transportation_days}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          ₵{summary.transportation_cost?.toFixed(2) || '0.00'}
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredSummary.length > 0 && (
+                      <tr className="bg-gray-50 font-medium">
+                        <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          Monthly Totals
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {totals.categoryA.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {totals.categoryC.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {totals.transportDays}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₵{totals.transportCost.toFixed(2)}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </ResponsiveTable>
             )}
           </Card>
         </div>

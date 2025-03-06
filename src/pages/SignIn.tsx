@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { admin } from "@/lib/api"; // Import the API utility
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -20,24 +21,22 @@ const SignIn = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
+    console.log("Starting sign in process..."); // Debug log
 
     try {
-      const response = await fetch("https://overtime-transport-backend.vercel.app/api/admin/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to sign in");
-      }
-
+      console.log("Attempting to sign in with:", { email: formData.email }); // Debug log (omit password)
+      const data = await admin.signIn(formData);
+      console.log("Sign in successful, received data:", data); // Debug log
+      
       // Store the token and user info
       localStorage.setItem("token", data.token);
+      
+      // Set token expiry (24 hours from now)
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 24);  
+      localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+      console.log("Token stored with expiry:", expiryDate.toISOString()); // Debug log
+
       localStorage.setItem("user", JSON.stringify({
         name: data.user.name,
         staffId: data.user.staffId,
@@ -45,8 +44,10 @@ const SignIn = () => {
       }));
       
       // Redirect to dashboard
+      console.log("Redirecting to dashboard..."); // Debug log
       navigate("/dashboard");
     } catch (err: any) {
+      console.error("Sign in error:", err); // Enhanced error logging
       setError(err.message);
     } finally {
       setLoading(false);
