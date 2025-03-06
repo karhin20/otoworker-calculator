@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogOut } from "lucide-react";
-import { format } from "date-fns";
+import { format } from "date-fns"; // Ensure this import is present
 import { workers, overtime } from "@/lib/api";
 import { Worker, WorkerDetail } from "@/types";
 
@@ -95,44 +95,96 @@ const WorkerDetails = () => {
     });
   };
 
-  const exportWorkerDetails = () => {
+  const exportWorkerDetails = (exportType: 'transportation' | 'overtime') => {
     if (!details.length || !selectedWorker) return;
 
     const worker = workersList.find(w => w.id === selectedWorker);
     if (!worker) return;
 
     const monthName = months.find(m => m.value === selectedMonth)?.label;
-    const fileName = `${worker.name}_${monthName}_${selectedYear}_details.csv`;
-
     const totals = calculateTotals();
-    let csvContent = 'Date,Entry Time,Exit Time,Category,Category A Hours,Category C Hours,Transport Cost\n';
+    
+    if (exportType === 'transportation') {
+      const fileName = `${worker.name}_${monthName}_${selectedYear}_transportation.csv`;
+      
+      const headerFields = [
+        `Employee: ${worker.name}`,
+        `Post: North East District`,
+        `Region: Accra East`,
+        `Activity: Distribution Operation`,
+        `Purpose of travel: Distribution activities`,
+        `Allowance for the month of: ${monthName}`
+      ];
+      
+      let csvContent = headerFields.join('\n') + '\n\n';
+      csvContent += 'Date,Origin,Destination,Purpose,Amount\n';
 
-    // Add each detail row
-    details.forEach((detail) => {
-      csvContent += `${format(new Date(detail.date), "yyyy-MM-dd")},`;
-      csvContent += `${detail.entry_time},`;
-      csvContent += `${detail.exit_time},`;
-      csvContent += `${detail.category},`;
-      csvContent += `${detail.category_a_hours || ''},`;
-      csvContent += `${detail.category_c_hours || ''},`;
-      csvContent += `${detail.transportation ? (detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2) : ''}\n`;
-    });
+      // Add each detail row
+      details.forEach((detail) => {
+        if (detail.transportation) {
+          csvContent += `${format(new Date(detail.date), "yyyy-MM-dd")},`;
+          csvContent += `${worker.area || detail.workers.default_area || 'Worker Area'},`;
+          csvContent += `North East District,`;
+          csvContent += `Distribution activities,`;
+          csvContent += `${(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}\n`;
+        }
+      });
 
-    // Add totals row
-    csvContent += `\nTotals,,,,`;
-    csvContent += `${totals.totalCategoryA.toFixed(2)},`;
-    csvContent += `${totals.totalCategoryC.toFixed(2)},`;
-    csvContent += `${totals.totalTransport.toFixed(2)}`;
+      // Add totals row
+      csvContent += `\nTotal,,,,${totals.totalTransport.toFixed(2)}`;
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (exportType === 'overtime') {
+      const fileName = `${worker.name}_${monthName}_${selectedYear}_overtime.csv`;
+      
+      const headerFields = [
+        `OVERTIME CLAIM FOR MONTH OF: ${monthName}`,
+        `Employee: ${worker.name}`,
+        `Post: ${worker.grade}`,
+        `Region: Greater Accra`
+      ];
+      
+      let csvContent = headerFields.join('\n') + '\n\n';
+      // Create a hierarchical header with two rows
+      csvContent += 'Name,Date,Time,Time,CAT,CAT,HRS,Remarks\n';
+      csvContent += ',,AM,PM,A,C,,\n';
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Add each detail row
+      details.forEach((detail) => {
+        const totalHours = (detail.category_a_hours || 0) + (detail.category_c_hours || 0);
+        
+        csvContent += `${worker.name},`;
+        csvContent += `${format(new Date(detail.date), "yyyy-MM-dd")},`;
+        csvContent += `${detail.entry_time},`;
+        csvContent += `${detail.exit_time},`;
+        csvContent += `${detail.category_a_hours || ''},`;
+        csvContent += `${detail.category_c_hours || ''},`;
+        csvContent += `${totalHours > 0 ? totalHours.toFixed(2) : ''},`;
+        csvContent += `${detail.remarks || ''}\n`;
+      });
+
+      // Add totals row - align Total Hours under HRS column
+      const totalHrs = totals.totalCategoryA + totals.totalCategoryC;
+      csvContent += `\nTotal,,,,,,${totalHrs.toFixed(2)},`;
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -302,13 +354,20 @@ const WorkerDetails = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-end space-x-4">
                   <Button
                     variant="outline"
-                    onClick={exportWorkerDetails}
+                    onClick={() => exportWorkerDetails('transportation')}
                     disabled={!details.length}
                   >
-                    Export Details
+                    Export Transportation
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => exportWorkerDetails('overtime')}
+                    disabled={!details.length}
+                  >
+                    Export Overtime
                   </Button>
                 </div>
               </>

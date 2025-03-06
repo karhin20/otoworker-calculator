@@ -121,13 +121,12 @@ const MonthlySummary = () => {
         variant: "default",
       });
     } catch (error) {
-      // Show error toast if export fails
+      console.error("Export error:", error);
       toast({
         title: "Export Failed",
         description: "There was an error exporting the data. Please try again.",
         variant: "destructive",
       });
-      console.error("Export error:", error);
     }
   };
 

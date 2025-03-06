@@ -5,6 +5,7 @@ export interface Worker {
   grade: Grade;
   default_area: string;
   transport_required: boolean;
+  area?: string;
   created_at?: string;
 }
 
@@ -77,16 +78,17 @@ export interface WorkerDetail {
   entry_time: string;
   exit_time: string;
   category: "A" | "C";
-  category_a_hours: number;
-  category_c_hours: number;
+  category_a_hours?: number;
+  category_c_hours?: number;
   transportation: boolean;
-  transportation_cost: number | null;
+  transportation_cost?: number;
   workers: {
     name: string;
     staff_id: string;
     grade: string;
     default_area: string;
   };
+  remarks?: string;
 }
 
 export interface Holiday {
