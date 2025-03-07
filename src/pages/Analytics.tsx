@@ -422,13 +422,20 @@ const Analytics = () => {
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" angle={-45} textAnchor="end" height={50} />
                           <YAxis />
-                          <Tooltip formatter={(value, name) => [
-                            name === 'cost' ? `₵${value}` : `₵${value} `, 
-                            name === 'cost' ? 'Cost' : 'Days'
-                          ]} />
+                          <Tooltip 
+                            formatter={(value, name) => {
+                              if (name === 'cost') {
+                                return [`₵${typeof value === 'number' ? value.toFixed(2) : value}`, 'Transport Cost'];
+                              }
+                              if (name === 'days') {
+                                return [`${value} day${value !== 1 ? 's' : ''}`, 'Transport Days'];
+                              }
+                              return [value, name];
+                            }} 
+                          />
                           <Legend />
-                          <Bar dataKey="cost" name="Transport Cost" fill="#8884d8" />
                           <Bar dataKey="days" name="Transport Days" fill="#82ca9d" />
+                          <Bar dataKey="cost" name="Transport Cost" fill="#8884d8" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
