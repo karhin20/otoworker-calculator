@@ -188,10 +188,10 @@ const WorkerDetails = () => {
       const fileName = `${worker.name}_${monthName}_${selectedYear}_overtime.csv`;
       
       const headerFields = [
-        `OVERTIME CLAIM FOR MONTH OF: ${monthName}`,
-        `Employee: ${worker.name}`,
-        `Post: ${worker.grade}`,
-        `Region: Greater Accra`
+        `OVERTIME CLAIMS FOR THE MONTH OF: ${monthName}`,
+        `Grade: ${worker.grade}`,
+        `Post: North East District`,
+        `Region: Accra East`,
       ];
       
       let csvContent = headerFields.join('\n') + '\n\n';
