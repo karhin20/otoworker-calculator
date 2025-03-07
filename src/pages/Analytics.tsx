@@ -423,7 +423,7 @@ const Analytics = () => {
                           <XAxis dataKey="name" angle={-45} textAnchor="end" height={50} />
                           <YAxis />
                           <Tooltip formatter={(value, name) => [
-                            name === 'cost' ? `₵${value}` : `${value} days`, 
+                            name === 'cost' ? `₵${value}` : `₵${value} `, 
                             name === 'cost' ? 'Cost' : 'Days'
                           ]} />
                           <Legend />
