@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Calendar, Download, Home, Users } from "lucide-react";
+import { LogOut, Calendar, Download, Home, Users, Shield } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,7 @@ import { WorkerSummary } from "@/types";
 import { getAndClearNotification } from "@/utils/notifications";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+  BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
@@ -268,6 +268,12 @@ const Analytics = () => {
               >
                 <Users className="mr-2 h-4 w-4" /> Worker Details
               </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/risk-management")}
+              >
+                <Shield className="mr-2 h-4 w-4" /> Risk Management
+              </Button>
             </nav>
           </Card>
 
@@ -344,7 +350,7 @@ const Analytics = () => {
                   <h3 className="text-lg font-semibold mb-4">Top Workers by Overtime Hours</h3>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
+                      <RechartsBarChart
                         data={chartData.topWorkers}
                         layout="vertical"
                         margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
@@ -356,7 +362,7 @@ const Analytics = () => {
                         <Legend />
                         <Bar dataKey="categoryA" stackId="a" name="Category A" fill="#0088FE" />
                         <Bar dataKey="categoryC" stackId="a" name="Category C" fill="#00C49F" />
-                      </BarChart>
+                      </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
                 </Card>
@@ -366,7 +372,7 @@ const Analytics = () => {
                   <h3 className="text-lg font-semibold mb-4">Overtime Hours by Grade</h3>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
+                      <RechartsBarChart
                         data={chartData.byGrade}
                         margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
                       >
@@ -377,7 +383,7 @@ const Analytics = () => {
                         <Legend />
                         <Bar dataKey="categoryA" name="Category A" fill="#0088FE" />
                         <Bar dataKey="categoryC" name="Category C" fill="#00C49F" />
-                      </BarChart>
+                      </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
                 </Card>
@@ -415,7 +421,7 @@ const Analytics = () => {
                     <h3 className="text-lg font-semibold mb-4">Transportation Costs</h3>
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
+                        <RechartsBarChart
                           data={chartData.transportCost.slice(0, 5)}
                           margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
                         >
@@ -436,7 +442,7 @@ const Analytics = () => {
                           <Legend />
                           <Bar dataKey="days" name="Transport Days" fill="#82ca9d" />
                           <Bar dataKey="cost" name="Transport Cost" fill="#8884d8" />
-                        </BarChart>
+                        </RechartsBarChart>
                       </ResponsiveContainer>
                     </div>
                   </Card>

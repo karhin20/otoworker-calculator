@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { LogOut, Download } from "lucide-react";
+import { LogOut, Download, Shield } from "lucide-react";
 import { overtime } from "@/lib/api";
 import { WorkerSummary } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
@@ -260,6 +260,12 @@ const MonthlySummary = () => {
                 onClick={() => navigate("/dashboard")}
               >
                 Back to Dashboard
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/risk-management")}
+              >
+                <Shield className="mr-2 h-4 w-4" /> Risk Management
               </Button>
             </div>
 

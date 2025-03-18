@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { LogOut, Download, Calendar as CalendarIcon, Home, BarChart, Users } from "lucide-react";
+import { LogOut, Download, Calendar as CalendarIcon, Home, BarChart, Users, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
@@ -17,6 +17,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { workers as workersApi, risk } from "@/lib/api";
 import { Worker, RiskEntry } from "@/types";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const RiskManagement = () => {
   const navigate = useNavigate();
@@ -29,6 +30,8 @@ const RiskManagement = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedWorker, setSelectedWorker] = useState(""); // For worker details tab
+  const [activeTab, setActiveTab] = useState("all-entries");
   const [formData, setFormData] = useState({
     worker_id: "",
     date: new Date(),
@@ -194,15 +197,25 @@ const RiskManagement = () => {
 
   // Filter entries based on search query
   const filteredEntries = useMemo(() => {
-    if (!searchQuery.trim()) return entries;
+    if (!searchQuery.trim() && !selectedWorker) return entries;
     
-    return entries.filter(entry => 
-      entry.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.worker.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.worker.grade.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [entries, searchQuery]);
+    let filtered = entries;
+    
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(entry => 
+        entry.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.worker.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.worker.grade.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    if (selectedWorker && activeTab === "worker-details") {
+      filtered = filtered.filter(entry => entry.worker_id === selectedWorker);
+    }
+    
+    return filtered;
+  }, [entries, searchQuery, selectedWorker, activeTab]);
 
   // Calculate total amount
   const totalAmount = useMemo(() => {
@@ -217,7 +230,7 @@ const RiskManagement = () => {
     }
   };
 
-  // Export data as CSV
+  // Export all data as CSV
   const exportData = () => {
     try {
       // Headers
@@ -245,7 +258,13 @@ const RiskManagement = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `risk_management_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.csv`);
+      
+      // Name the file based on if we're exporting for a specific worker or all
+      const fileName = selectedWorker && activeTab === "worker-details"
+        ? `risk_management_${getWorkerNameById(selectedWorker)}_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.csv`
+        : `risk_management_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.csv`;
+      
+      link.setAttribute('download', fileName);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -264,6 +283,84 @@ const RiskManagement = () => {
       });
       console.error("Export error:", error);
     }
+  };
+  
+  // Export data for a specific worker
+  const exportWorkerData = () => {
+    if (!selectedWorker) {
+      toast({
+        title: "No Worker Selected",
+        description: "Please select a worker to export data.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Filter entries for the selected worker
+    const workerEntries = entries.filter(entry => entry.worker_id === selectedWorker);
+    if (workerEntries.length === 0) {
+      toast({
+        title: "No Data Available",
+        description: "No risk management entries found for the selected worker in this period.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Headers
+      let csv = 'Month,Year,Name,Staff ID,Grade,Date,Location,Size/Depth,Remarks,Rate (₵)\n';
+      
+      // Add data rows
+      workerEntries.forEach(entry => {
+        csv += `${months.find(m => m.value === selectedMonth)?.label},`;
+        csv += `${selectedYear},`;
+        csv += `${entry.worker.name},`;
+        csv += `${entry.worker.staff_id},`;
+        csv += `${entry.worker.grade},`;
+        csv += `${format(new Date(entry.date), "yyyy-MM-dd")},`;
+        csv += `${entry.location},`;
+        csv += `${entry.size_depth},`;
+        csv += `${entry.remarks || ""},`;
+        csv += `${entry.rate?.toFixed(2) || "10.00"}\n`;
+      });
+      
+      // Calculate total for this worker
+      const workerTotal = workerEntries.reduce((total, entry) => total + (entry.rate || 10), 0);
+      
+      // Add total row
+      csv += `\nTotal,,,,,,,,,${workerTotal.toFixed(2)}\n`;
+      
+      // Create download link
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `risk_management_${getWorkerNameById(selectedWorker)}_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Export Successful",
+        description: `Risk management data for ${getWorkerNameById(selectedWorker)} has been exported successfully.`,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting the data. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Export error:", error);
+    }
+  };
+
+  // Helper function to get worker name by ID
+  const getWorkerNameById = (workerId: string): string => {
+    const worker = workers.find(w => w.id === workerId);
+    return worker ? worker.name : "Unknown Worker";
   };
 
   return (
@@ -419,121 +516,222 @@ const RiskManagement = () => {
               </form>
             </Card>
 
-            {/* Risk Entries Table */}
+            {/* Risk Entries Tabs */}
             <Card className="p-6 bg-white shadow-sm col-span-1 lg:col-span-2">
-              <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Risk Management Entries
-                </h2>
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium">Month:</span>
-                    <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
-                      <SelectTrigger className="w-36">
-                        <SelectValue placeholder="Select month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map(month => (
-                          <SelectItem key={month.value} value={month.value.toString()}>
-                            {month.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              <Tabs defaultValue="all-entries" className="mb-6" onValueChange={setActiveTab}>
+                <TabsList>
+                  <TabsTrigger value="all-entries">All Entries</TabsTrigger>
+                  <TabsTrigger value="worker-details">Worker Details</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all-entries">
+                  <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      Risk Management Entries
+                    </h2>
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">Month:</span>
+                        <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
+                          <SelectTrigger className="w-36">
+                            <SelectValue placeholder="Select month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {months.map(month => (
+                              <SelectItem key={month.value} value={month.value.toString()}>
+                                {month.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">Year:</span>
+                        <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+                          <SelectTrigger className="w-28">
+                            <SelectValue placeholder="Select year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {years.map(year => (
+                              <SelectItem key={year.value} value={year.value.toString()}>
+                                {year.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button variant="outline" onClick={exportData}>
+                        <Download className="mr-2 h-4 w-4" /> Export Data
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium">Year:</span>
-                    <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
-                      <SelectTrigger className="w-28">
-                        <SelectValue placeholder="Select year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {years.map(year => (
-                          <SelectItem key={year.value} value={year.value.toString()}>
-                            {year.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                  <div className="mb-4">
+                    <Input
+                      placeholder="Search by worker name, staff ID, or location..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="max-w-md"
+                    />
                   </div>
-                  <Button variant="outline" onClick={exportData}>
-                    <Download className="mr-2 h-4 w-4" /> Export Data
-                  </Button>
-                </div>
-              </div>
 
-              <div className="mb-4">
-                <Input
-                  placeholder="Search by worker name, staff ID, or location..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-md"
-                />
-              </div>
+                  {renderEntriesTable()}
+                </TabsContent>
+                
+                <TabsContent value="worker-details">
+                  <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      Worker Risk Management Details
+                    </h2>
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">Month:</span>
+                        <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
+                          <SelectTrigger className="w-36">
+                            <SelectValue placeholder="Select month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {months.map(month => (
+                              <SelectItem key={month.value} value={month.value.toString()}>
+                                {month.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">Year:</span>
+                        <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+                          <SelectTrigger className="w-28">
+                            <SelectValue placeholder="Select year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {years.map(year => (
+                              <SelectItem key={year.value} value={year.value.toString()}>
+                                {year.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
 
-              {loading ? (
-                <TableSkeleton rows={5} columns={6} />
-              ) : filteredEntries.length === 0 ? (
-                <div className="py-10 text-center text-gray-500">
-                  No risk management entries found for this period.
-                </div>
-              ) : (
-                <div className="overflow-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worker</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size/Depth</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₵)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredEntries.map((entry) => (
-                        <tr key={entry.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            <div>{entry.worker.name}</div>
-                            <div className="text-xs text-gray-500">{entry.worker.staff_id} - {entry.worker.grade}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {format(new Date(entry.date), "PP")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {entry.location}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {entry.size_depth}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 max-w-md break-words">
-                            {entry.remarks || "-"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {entry.rate?.toFixed(2) || "10.00"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-gray-50">
-                        <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
-                          Total Amount:
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ₵{totalAmount.toFixed(2)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <Label htmlFor="worker-select">Select Worker</Label>
+                      <Select
+                        value={selectedWorker}
+                        onValueChange={setSelectedWorker}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select worker" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workers.map((worker) => (
+                            <SelectItem key={worker.id} value={worker.id}>
+                              {worker.name} ({worker.staff_id})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-end">
+                      <Button 
+                        variant="outline" 
+                        onClick={exportWorkerData}
+                        disabled={!selectedWorker}
+                        className="ml-auto"
+                      >
+                        <FileText className="mr-2 h-4 w-4" /> Export Worker Data
+                      </Button>
+                    </div>
+                  </div>
+
+                  {renderEntriesTable()}
+                </TabsContent>
+              </Tabs>
             </Card>
           </div>
         </div>
       </div>
     </ErrorBoundary>
   );
+  
+  // Helper function to render the entries table
+  function renderEntriesTable() {
+    if (loading) {
+      return <TableSkeleton rows={5} columns={6} />;
+    } 
+    
+    if (activeTab === "worker-details" && !selectedWorker) {
+      return (
+        <div className="py-10 text-center text-gray-500">
+          Please select a worker to view their risk management entries.
+        </div>
+      );
+    }
+    
+    if (filteredEntries.length === 0) {
+      return (
+        <div className="py-10 text-center text-gray-500">
+          No risk management entries found for this period.
+        </div>
+      );
+    }
+    
+    return (
+      <div className="overflow-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worker</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size/Depth</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₵)</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredEntries.map((entry) => (
+              <tr key={entry.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <div>{entry.worker.name}</div>
+                  <div className="text-xs text-gray-500">{entry.worker.staff_id} - {entry.worker.grade}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {format(new Date(entry.date), "PP")}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {entry.location}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {entry.size_depth}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500 max-w-md break-words">
+                  {entry.remarks || "-"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {entry.rate?.toFixed(2) || "10.00"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-gray-50">
+              <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
+                Total Amount:
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                ₵{totalAmount.toFixed(2)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    );
+  }
 };
 
 export default RiskManagement; 
