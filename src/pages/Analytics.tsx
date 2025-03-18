@@ -490,7 +490,7 @@ const Analytics = () => {
                           <YAxis dataKey="name" type="category" width={100} />
                           <Tooltip 
                             formatter={(value, name) => {
-                              if (name === 'totalAmount') return [`₵${typeof value === 'number' ? value.toFixed(2) : value}`, 'Amount'];
+                              if (name === 'Risk Amount') return [`₵${typeof value === 'number' ? value.toFixed(2) : value}`, 'Amount'];
                               return [`${value} entries`, 'Entries'];
                             }} 
                           />
@@ -566,11 +566,11 @@ const Analytics = () => {
                           <YAxis />
                           <Tooltip 
                             formatter={(value, name) => {
-                              if (name === 'cost') {
-                                return [`₵${typeof value === 'number' ? value.toFixed(2) : value}`, 'Transport Cost'];
+                              if (name === 'Transport Cost') {
+                                return [`₵${typeof value === 'number' ? value.toFixed(2) : value}`, 'Cost'];
                               }
-                              if (name === 'days') {
-                                return [`${value} day${value !== 1 ? 's' : ''}`, 'Transport Days'];
+                              if (name === 'Transport Days') {
+                                return [`${value} day${value !== 1 ? 's' : ''}`, 'Days'];
                               }
                               return [value, name];
                             }} 
