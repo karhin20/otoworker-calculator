@@ -233,25 +233,54 @@ const RiskManagement = () => {
   // Export all data as CSV
   const exportData = () => {
     try {
-      // Headers
-      let csv = 'Month,Year,Name,Staff ID,Grade,Date,Location,Size/Depth,Remarks,Rate (₵)\n';
+      if (filteredEntries.length === 0) {
+        toast({
+          title: "No Data Available",
+          description: "No risk management entries found for this period.",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      // Add data rows
+      // Group entries by worker
+      const workerGroups = new Map();
+      
       filteredEntries.forEach(entry => {
-        csv += `${months.find(m => m.value === selectedMonth)?.label},`;
-        csv += `${selectedYear},`;
-        csv += `${entry.worker.name},`;
-        csv += `${entry.worker.staff_id},`;
-        csv += `${entry.worker.grade},`;
-        csv += `${format(new Date(entry.date), "yyyy-MM-dd")},`;
-        csv += `${entry.location},`;
-        csv += `${entry.size_depth},`;
-        csv += `${entry.remarks || ""},`;
-        csv += `${entry.rate?.toFixed(2) || "10.00"}\n`;
+        if (!workerGroups.has(entry.worker_id)) {
+          workerGroups.set(entry.worker_id, []);
+        }
+        workerGroups.get(entry.worker_id).push(entry);
       });
       
-      // Add total row
-      csv += `\nTotal,,,,,,,,,${totalAmount.toFixed(2)}\n`;
+      // Headers
+      let csv = `Month, ${months.find(m => m.value === selectedMonth)?.label}\n`;
+      csv += `Year, ${selectedYear}\n\n`;
+      
+      // Add each worker's data as a section
+      Array.from(workerGroups.entries()).forEach(([_, workerEntries]) => {
+        const workerInfo = workerEntries[0].worker;
+        
+        // Worker information
+        csv += `Name: ${workerInfo.name}  Staff ID: ${workerInfo.staff_id}  Grade: ${workerInfo.grade}\n\n`;
+        
+        // Table headers
+        csv += 'Date,Location,Size/Depth,Rate (₵)\n';
+        
+        // Add data rows for this worker
+        workerEntries.forEach((entry: RiskEntry) => {
+          csv += `${format(new Date(entry.date), "yyyy-MM-dd")},`;
+          csv += `${entry.location},`;
+          csv += `${entry.size_depth},`;
+          csv += `${entry.rate?.toFixed(2) || "10.00"}\n`;
+        });
+        
+        // Calculate subtotal for this worker
+        const workerTotal = workerEntries.reduce((total: number, entry: RiskEntry) => total + (entry.rate || 10), 0);
+        csv += `Subtotal,,,${workerTotal.toFixed(2)}\n\n`;
+      });
+      
+      // Add overall total
+      csv += `\nTotal Amount,,,${totalAmount.toFixed(2)}\n`;
       
       // Create download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -259,10 +288,8 @@ const RiskManagement = () => {
       const link = document.createElement('a');
       link.setAttribute('href', url);
       
-      // Name the file based on if we're exporting for a specific worker or all
-      const fileName = selectedWorker && activeTab === "worker-details"
-        ? `risk_management_${getWorkerNameById(selectedWorker)}_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.csv`
-        : `risk_management_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.csv`;
+      // Name the file for all entries
+      const fileName = `risk_management_all_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.csv`;
       
       link.setAttribute('download', fileName);
       link.style.visibility = 'hidden';
@@ -308,20 +335,24 @@ const RiskManagement = () => {
     }
     
     try {
-      // Headers
-      let csv = 'Month,Year,Name,Staff ID,Grade,Date,Location,Size/Depth,Remarks,Rate (₵)\n';
+      // Get worker details from the first entry
+      const workerInfo = workerEntries[0].worker;
+      
+      // Headers - new format
+      let csv = `Month, ${months.find(m => m.value === selectedMonth)?.label}\n`;
+      csv += `Year, ${selectedYear}\n\n`;
+      
+      // Worker information on its own line
+      csv += `Name: ${workerInfo.name}  Staff ID: ${workerInfo.staff_id}  Grade: ${workerInfo.grade}\n\n`;
+      
+      // Table headers
+      csv += 'Date,Location,Size/Depth,Rate (₵)\n';
       
       // Add data rows
       workerEntries.forEach(entry => {
-        csv += `${months.find(m => m.value === selectedMonth)?.label},`;
-        csv += `${selectedYear},`;
-        csv += `${entry.worker.name},`;
-        csv += `${entry.worker.staff_id},`;
-        csv += `${entry.worker.grade},`;
         csv += `${format(new Date(entry.date), "yyyy-MM-dd")},`;
         csv += `${entry.location},`;
         csv += `${entry.size_depth},`;
-        csv += `${entry.remarks || ""},`;
         csv += `${entry.rate?.toFixed(2) || "10.00"}\n`;
       });
       
@@ -329,7 +360,7 @@ const RiskManagement = () => {
       const workerTotal = workerEntries.reduce((total, entry) => total + (entry.rate || 10), 0);
       
       // Add total row
-      csv += `\nTotal,,,,,,,,,${workerTotal.toFixed(2)}\n`;
+      csv += `\nTotal,,,${workerTotal.toFixed(2)}\n`;
       
       // Create download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
