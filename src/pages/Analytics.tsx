@@ -6,8 +6,8 @@ import { LogOut, Calendar, Download, Home, Users, Shield } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { overtime } from "@/lib/api";
-import { WorkerSummary } from "@/types";
+import { overtime, risk } from "@/lib/api";
+import { WorkerSummary, RiskSummary } from "@/types";
 import { getAndClearNotification } from "@/utils/notifications";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { 
@@ -18,6 +18,7 @@ import {
 const Analytics = () => {
   const navigate = useNavigate();
   const [summaryData, setSummaryData] = useState<WorkerSummary[]>([]);
+  const [riskSummaryData, setRiskSummaryData] = useState<RiskSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -88,6 +89,23 @@ const Analytics = () => {
     fetchSummaryData();
   }, [selectedMonth, selectedYear]);
 
+  // Fetch risk summary data when month or year changes
+  useEffect(() => {
+    const fetchRiskSummaryData = async () => {
+      try {
+        const data = await risk.getSummary(selectedMonth, selectedYear);
+        setRiskSummaryData(data.sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (error: any) {
+        console.error("Failed to fetch risk summary data:", error);
+        // Don't show a toast notification as risk management might be optional
+        // Just set empty data
+        setRiskSummaryData([]);
+      }
+    };
+
+    fetchRiskSummaryData();
+  }, [selectedMonth, selectedYear]);
+
   // Handle sign out
   const handleSignOut = () => {
     localStorage.removeItem("token");
@@ -150,32 +168,62 @@ const Analytics = () => {
         categoryC: worker.category_c_hours
       }));
 
-    // Category A vs C distribution
-    const totalCategoryA = summaryData.reduce((sum, worker) => sum + worker.category_a_hours, 0);
-    const totalCategoryC = summaryData.reduce((sum, worker) => sum + worker.category_c_hours, 0);
+    // Overtime distribution for pie chart
     const overtimeDistribution = [
-      { name: 'Category A', value: totalCategoryA },
-      { name: 'Category C', value: totalCategoryC }
+      { name: 'Category A', value: summaryData.reduce((sum, worker) => sum + worker.category_a_hours, 0) },
+      { name: 'Category C', value: summaryData.reduce((sum, worker) => sum + worker.category_c_hours, 0) }
     ];
 
     return { byGrade, transportCost, topWorkers, overtimeDistribution };
   }, [summaryData]);
 
-  // Color scheme for charts
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD'];
+  // Memoized calculated data for risk charts
+  const riskChartData = useMemo(() => {
+    if (!riskSummaryData.length) return { 
+      topRiskWorkers: []
+    };
+
+    // Top workers by risk amount
+    const topRiskWorkers = [...riskSummaryData]
+      .sort((a, b) => b.total_amount - a.total_amount)
+      .slice(0, 5)
+      .map(worker => ({
+        name: worker.name,
+        totalAmount: worker.total_amount,
+        totalEntries: worker.total_entries
+      }));
+
+    return { topRiskWorkers };
+  }, [riskSummaryData]);
 
   // Calculate totals
   const totals = useMemo(() => {
-    return summaryData.reduce(
-      (acc, item) => ({
-        categoryA: acc.categoryA + (item.category_a_hours || 0),
-        categoryC: acc.categoryC + (item.category_c_hours || 0),
-        transportDays: acc.transportDays + (item.transportation_days || 0),
-        transportCost: acc.transportCost + (item.transportation_cost || 0),
-      }),
-      { categoryA: 0, categoryC: 0, transportDays: 0, transportCost: 0 }
-    );
-  }, [summaryData]);
+    const result = {
+      categoryA: 0,
+      categoryC: 0,
+      transportDays: 0,
+      transportCost: 0,
+      riskEntries: 0,
+      riskAmount: 0
+    };
+    
+    summaryData.forEach(worker => {
+      result.categoryA += worker.category_a_hours;
+      result.categoryC += worker.category_c_hours;
+      result.transportDays += worker.transportation_days;
+      result.transportCost += worker.transportation_cost;
+    });
+
+    riskSummaryData.forEach(worker => {
+      result.riskEntries += worker.total_entries;
+      result.riskAmount += worker.total_amount;
+    });
+    
+    return result;
+  }, [summaryData, riskSummaryData]);
+
+  // COLORS for charts
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   // Handle month change
   const handleMonthChange = (value: string) => {
@@ -191,12 +239,66 @@ const Analytics = () => {
   const exportData = () => {
     try {
       // Headers
-      let csv = 'Name,Staff ID,Grade,Category A Hours,Category C Hours,Transportation Days,Transportation Cost\n';
+      let csv = 'Worker,Grade,Category A Hours,Category C Hours,Transportation Days,Transportation Cost';
+      
+      // Add risk headers if we have risk data
+      if (riskSummaryData.length > 0) {
+        csv += ',Risk Entries,Risk Amount';
+      }
+      
+      csv += '\n';
+      
+      // Combine data from both sources
+      const allWorkerIds = new Set([
+        ...summaryData.map(w => w.worker_id),
+        ...riskSummaryData.map(w => w.worker_id)
+      ]);
+      
+      // Create a map for quick lookup
+      const overtimeMap = new Map(summaryData.map(w => [w.worker_id, w]));
+      const riskMap = new Map(riskSummaryData.map(w => [w.worker_id, w]));
       
       // Add data rows
-      summaryData.forEach(worker => {
-        csv += `${worker.name},${worker.staff_id},${worker.grade},${worker.category_a_hours},${worker.category_c_hours},${worker.transportation_days},${worker.transportation_cost}\n`;
+      Array.from(allWorkerIds).forEach(workerId => {
+        const overtimeData = overtimeMap.get(workerId);
+        const riskData = riskMap.get(workerId);
+        
+        // If we have overtime data
+        if (overtimeData) {
+          csv += `${overtimeData.name},`;
+          csv += `${overtimeData.grade},`;
+          csv += `${overtimeData.category_a_hours},`;
+          csv += `${overtimeData.category_c_hours},`;
+          csv += `${overtimeData.transportation_days},`;
+          csv += `${overtimeData.transportation_cost.toFixed(2)}`;
+        } else if (riskData) {
+          // If we only have risk data
+          csv += `${riskData.name},`;
+          csv += `${riskData.grade},`;
+          csv += `0,0,0,0.00`;
+        }
+        
+        // Add risk data if available
+        if (riskSummaryData.length > 0) {
+          if (riskData) {
+            csv += `,${riskData.total_entries},${riskData.total_amount.toFixed(2)}`;
+          } else {
+            csv += `,0,0.00`;
+          }
+        }
+        
+        csv += '\n';
       });
+      
+      // Add totals row
+      csv += `Total,,${totals.categoryA.toFixed(2)},${totals.categoryC.toFixed(2)},${totals.transportDays},${totals.transportCost.toFixed(2)}`;
+      
+      // Add risk totals if available
+      if (riskSummaryData.length > 0) {
+        csv += `,${totals.riskEntries},${totals.riskAmount.toFixed(2)}`;
+      }
+      
+      csv += '\n';
       
       // Create download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -249,7 +351,7 @@ const Analytics = () => {
           </div>
 
           <Card className="p-4 bg-white shadow-sm">
-            <nav className="flex space-x-4">
+            <nav className="flex flex-wrap gap-2 space-x-2">
               <Button
                 variant="ghost"
                 onClick={() => navigate("/dashboard")}
@@ -258,15 +360,15 @@ const Analytics = () => {
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => navigate("/monthly-summary")}
-              >
-                <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
-              </Button>
-              <Button
-                variant="ghost"
                 onClick={() => navigate("/worker-details")}
               >
                 <Users className="mr-2 h-4 w-4" /> Worker Details
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/monthly-summary")}
+              >
+                <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
               </Button>
               <Button
                 variant="ghost"
@@ -280,7 +382,7 @@ const Analytics = () => {
           <Card className="p-6 bg-white shadow-sm">
             <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-800">
-                Overtime & Transportation Analytics
+                Overtime, Transportation & Risk Analytics
               </h2>
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center space-x-2">
@@ -326,7 +428,7 @@ const Analytics = () => {
             ) : (
               <div className="space-y-8">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <Card className="p-4 bg-blue-50 shadow-sm">
                     <h3 className="text-lg font-medium text-blue-800">Total Category A Hours</h3>
                     <p className="text-3xl font-bold text-blue-900 mt-2">{totals.categoryA.toFixed(2)}</p>
@@ -342,6 +444,11 @@ const Analytics = () => {
                   <Card className="p-4 bg-purple-50 shadow-sm">
                     <h3 className="text-lg font-medium text-purple-800">Total Transport Cost</h3>
                     <p className="text-3xl font-bold text-purple-900 mt-2">₵{totals.transportCost.toFixed(2)}</p>
+                  </Card>
+                  <Card className="p-4 bg-red-50 shadow-sm">
+                    <h3 className="text-lg font-medium text-red-800">Total Risk Amount</h3>
+                    <p className="text-3xl font-bold text-red-900 mt-2">₵{totals.riskAmount.toFixed(2)}</p>
+                    <p className="text-sm text-red-600 mt-1">{totals.riskEntries} entries</p>
                   </Card>
                 </div>
 
@@ -366,6 +473,35 @@ const Analytics = () => {
                     </ResponsiveContainer>
                   </div>
                 </Card>
+
+                {/* Risk Management Chart */}
+                {riskChartData.topRiskWorkers.length > 0 && (
+                  <Card className="p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold mb-4">Top Workers by Risk Management Amount</h3>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsBarChart
+                          data={riskChartData.topRiskWorkers}
+                          layout="vertical"
+                          margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis dataKey="name" type="category" width={100} />
+                          <Tooltip 
+                            formatter={(value, name) => {
+                              if (name === 'totalAmount') return [`₵${typeof value === 'number' ? value.toFixed(2) : value}`, 'Amount'];
+                              return [`${value} entries`, 'Entries'];
+                            }} 
+                          />
+                          <Legend />
+                          <Bar dataKey="totalAmount" name="Risk Amount" fill="#FF8042" />
+                          <Bar dataKey="totalEntries" name="Risk Entries" fill="#8884D8" />
+                        </RechartsBarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+                )}
 
                 {/* Overtime by Grade Chart */}
                 <Card className="p-6 shadow-sm">
