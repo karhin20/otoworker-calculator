@@ -428,7 +428,7 @@ const Analytics = () => {
             ) : (
               <div className="space-y-8">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <Card className="p-4 bg-blue-50 shadow-sm">
                     <h3 className="text-lg font-medium text-blue-800">Total Category A Hours</h3>
                     <p className="text-3xl font-bold text-blue-900 mt-2">{totals.categoryA.toFixed(2)}</p>
@@ -436,10 +436,6 @@ const Analytics = () => {
                   <Card className="p-4 bg-green-50 shadow-sm">
                     <h3 className="text-lg font-medium text-green-800">Total Category C Hours</h3>
                     <p className="text-3xl font-bold text-green-900 mt-2">{totals.categoryC.toFixed(2)}</p>
-                  </Card>
-                  <Card className="p-4 bg-amber-50 shadow-sm">
-                    <h3 className="text-lg font-medium text-amber-800">Total Transport Days</h3>
-                    <p className="text-3xl font-bold text-amber-900 mt-2">{totals.transportDays}</p>
                   </Card>
                   <Card className="p-4 bg-purple-50 shadow-sm">
                     <h3 className="text-lg font-medium text-purple-800">Total Transport Cost</h3>
