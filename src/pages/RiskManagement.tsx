@@ -264,23 +264,24 @@ const RiskManagement = () => {
         csv += `Name: ${workerInfo.name}  Staff ID: ${workerInfo.staff_id}  Grade: ${workerInfo.grade}\n\n`;
         
         // Table headers
-        csv += 'Date,Location,Size/Depth,Rate (₵)\n';
+        csv += 'Date,Location,Size/Depth,Rate (Cedis),Remarks\n';
         
         // Add data rows for this worker
         workerEntries.forEach((entry: RiskEntry) => {
           csv += `${format(new Date(entry.date), "yyyy-MM-dd")},`;
           csv += `${entry.location},`;
           csv += `${entry.size_depth},`;
-          csv += `${entry.rate?.toFixed(2) || "10.00"}\n`;
+          csv += `${entry.rate?.toFixed(2) || "10.00"},`;
+          csv += `${entry.remarks || ""}\n`;
         });
         
         // Calculate subtotal for this worker
         const workerTotal = workerEntries.reduce((total: number, entry: RiskEntry) => total + (entry.rate || 10), 0);
-        csv += `Subtotal,,,${workerTotal.toFixed(2)}\n\n`;
+        csv += `Subtotal,,,,${workerTotal.toFixed(2)}\n\n`;
       });
       
       // Add overall total
-      csv += `\nTotal Amount,,,${totalAmount.toFixed(2)}\n`;
+      csv += `\nTotal Amount,,,,${totalAmount.toFixed(2)}\n`;
       
       // Create download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -346,21 +347,22 @@ const RiskManagement = () => {
       csv += `Name: ${workerInfo.name}  Staff ID: ${workerInfo.staff_id}  Grade: ${workerInfo.grade}\n\n`;
       
       // Table headers
-      csv += 'Date,Location,Size/Depth,Rate (₵)\n';
+      csv += 'Date,Location,Size/Depth,Rate (Cedis),Remarks\n';
       
       // Add data rows
       workerEntries.forEach(entry => {
         csv += `${format(new Date(entry.date), "yyyy-MM-dd")},`;
         csv += `${entry.location},`;
         csv += `${entry.size_depth},`;
-        csv += `${entry.rate?.toFixed(2) || "10.00"}\n`;
+        csv += `${entry.rate?.toFixed(2) || "10.00"},`;
+        csv += `${entry.remarks || ""}\n`;
       });
       
       // Calculate total for this worker
       const workerTotal = workerEntries.reduce((total, entry) => total + (entry.rate || 10), 0);
       
       // Add total row
-      csv += `\nTotal,,,${workerTotal.toFixed(2)}\n`;
+      csv += `\nTotal,,,,${workerTotal.toFixed(2)}\n`;
       
       // Create download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
