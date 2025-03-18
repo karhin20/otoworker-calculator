@@ -8,6 +8,7 @@ import Index from "@/pages/Index";
 import WorkerDetails from "@/pages/WorkerDetails";
 import MonthlySummary from "@/pages/MonthlySummary";
 import Analytics from "@/pages/Analytics";
+import RiskManagement from "@/pages/RiskManagement";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AddWorker from "./pages/AddWorker";
 
@@ -62,6 +63,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/risk-management"
+              element={
+                <ProtectedRoute>
+                  <RiskManagement />
                 </ProtectedRoute>
               }
             />

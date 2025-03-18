@@ -96,3 +96,28 @@ export interface Holiday {
   date: Date;
   name: string;
 }
+
+export interface RiskEntry {
+  id: string;
+  worker_id: string;
+  date: string;
+  location: string;
+  size_depth: string;
+  remarks?: string;
+  rate: number;
+  created_at: string;
+  worker: {
+    name: string;
+    staff_id: string;
+    grade: string;
+  };
+}
+
+export interface RiskSummary {
+  worker_id: string;
+  name: string;
+  staff_id: string;
+  grade: string;
+  total_entries: number;
+  total_amount: number;
+}

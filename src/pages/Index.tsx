@@ -4,7 +4,7 @@ import { Worker, WorkerSummary } from "@/types";
 import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Calendar, Users, LogOut, Download, BarChart } from "lucide-react";
+import { Plus, Calendar, Users, LogOut, Download, BarChart, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { workers as workersApi, overtime } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -385,6 +385,48 @@ const Index = () => {
               </ResponsiveTable>
             )}
           </Card>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <Card className="p-6 hover:shadow-lg transition-shadow">
+              <h2 className="text-lg font-medium mb-2">Worker Details</h2>
+              <p className="text-gray-500 mb-4">View and manage worker overtime details.</p>
+              <Button onClick={() => navigate("/worker-details")}>
+                <Users className="mr-2 h-4 w-4" /> Worker Details
+              </Button>
+            </Card>
+
+            <Card className="p-6 hover:shadow-lg transition-shadow">
+              <h2 className="text-lg font-medium mb-2">Monthly Summary</h2>
+              <p className="text-gray-500 mb-4">View monthly overtime and transport summaries.</p>
+              <Button onClick={() => navigate("/monthly-summary")}>
+                <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
+              </Button>
+            </Card>
+
+            <Card className="p-6 hover:shadow-lg transition-shadow">
+              <h2 className="text-lg font-medium mb-2">Add Worker</h2>
+              <p className="text-gray-500 mb-4">Register a new worker in the system.</p>
+              <Button onClick={() => navigate("/add-worker")}>
+                <Plus className="mr-2 h-4 w-4" /> Add Worker
+              </Button>
+            </Card>
+
+            <Card className="p-6 hover:shadow-lg transition-shadow">
+              <h2 className="text-lg font-medium mb-2">Analytics</h2>
+              <p className="text-gray-500 mb-4">View data visualization and insights.</p>
+              <Button onClick={() => navigate("/analytics")}>
+                <BarChart className="mr-2 h-4 w-4" /> Analytics
+              </Button>
+            </Card>
+            
+            <Card className="p-6 hover:shadow-lg transition-shadow">
+              <h2 className="text-lg font-medium mb-2">Risk Management</h2>
+              <p className="text-gray-500 mb-4">Track and manage worker risk activities.</p>
+              <Button onClick={() => navigate("/risk-management")}>
+                <Shield className="mr-2 h-4 w-4" /> Risk Management
+              </Button>
+            </Card>
+          </div>
         </div>
       </div>
     </ErrorBoundary>

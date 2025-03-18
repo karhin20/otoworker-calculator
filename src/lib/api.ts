@@ -1,4 +1,4 @@
-import { Grade, WorkerDetail, WorkerSummary } from "@/types";
+import { Grade, WorkerDetail, WorkerSummary, RiskEntry, RiskSummary } from "@/types";
 import { isOnline, queueOfflineRequest, getOfflineData, cacheDataForOffline } from "@/utils/offline";
 import { clearAuthData } from "@/utils/auth";
 
@@ -266,4 +266,51 @@ export const admin = {
       body: data, 
       requiresAuth: false 
     }),
+};
+
+// Add risk management endpoints with caching
+export const risk = {
+  async getMonthly(month: number, year: number): Promise<RiskEntry[]> {
+    const cacheKey = generateCacheKey('risk/getMonthly', { month, year });
+    const cachedData = getCache(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+    
+    const data = await apiCall(`/risk?month=${month}&year=${year}`);
+    setCache(cacheKey, data);
+    return data;
+  },
+  
+  async getSummary(month: number, year: number): Promise<RiskSummary[]> {
+    const cacheKey = generateCacheKey('risk/getSummary', { month, year });
+    const cachedData = getCache(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+    
+    const data = await apiCall(`/risk/summary?month=${month}&year=${year}`);
+    setCache(cacheKey, data);
+    return data;
+  },
+  
+  create: (data: {
+    worker_id: string;
+    date: string;
+    location: string;
+    size_depth: string;
+    remarks?: string;
+  }) => {
+    // Clear relevant cache entries when creating new risk entry
+    clearCache('risk/');
+    return apiCall("/risk", {
+      method: "POST",
+      body: {
+        ...data,
+        rate: 10.00 // Fixed rate of 10.00 cedis
+      },
+    });
+  },
 };
