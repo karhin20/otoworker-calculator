@@ -277,11 +277,11 @@ const RiskManagement = () => {
         
         // Calculate subtotal for this worker
         const workerTotal = workerEntries.reduce((total: number, entry: RiskEntry) => total + (entry.rate || 10), 0);
-        csv += `Subtotal,,,,${workerTotal.toFixed(2)}\n\n`;
+        csv += `Subtotal,,,${workerTotal.toFixed(2)}\n\n`;
       });
       
       // Add overall total
-      csv += `\nTotal Amount,,,,${totalAmount.toFixed(2)}\n`;
+      csv += `\nTotal Amount,,,${totalAmount.toFixed(2)}\n`;
       
       // Create download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -362,7 +362,7 @@ const RiskManagement = () => {
       const workerTotal = workerEntries.reduce((total, entry) => total + (entry.rate || 10), 0);
       
       // Add total row
-      csv += `\nTotal,,,,${workerTotal.toFixed(2)}\n`;
+      csv += `\nTotal,,,${workerTotal.toFixed(2)}\n`;
       
       // Create download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
