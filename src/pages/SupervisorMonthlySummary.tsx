@@ -137,7 +137,7 @@ const SupervisorMonthlySummary = () => {
   // Get appropriate badge for approval status
   const getApprovalBadge = (worker: WorkerSummary) => {
     const status = worker.approval_status || "Pending";
-    const statusCounts = worker.status_counts || {};
+    const statusCounts = (worker.status_counts || {}) as Record<string, number>;
     const totalEntries = worker.entries?.length || 0;
     
     // Create status indicator showing counts

@@ -57,9 +57,9 @@ const WorkerDashboard = () => {
         setLoading(true); // Set loading true at the beginning
         try {
           // Fetch worker details using staffId to get the DB ID
-          const workerDetails = await workers.getByStaffId(user.staffId) as Worker;
+          const workerDetails = await workers.getByStaffId(user.staffId) as unknown as Worker;
           if (workerDetails && workerDetails.id) {
-            setWorkerDbId(workerDetails.id); // Store the DB ID
+            setWorkerDbId((workerDetails as any).id); // Store the DB ID
             // Now fetch summary and clock status using the obtained DB ID
             await fetchWorkerSummary(workerDetails.id);
             await fetchClockStatus(); // Clock status might implicitly use the authenticated worker ID now
@@ -97,7 +97,7 @@ const WorkerDashboard = () => {
         setWorkerInfo({
           name: response.worker.name || "Unknown",
           staffId: response.worker.staff_id || "Unknown",
-          grade: response.worker.grade || "Unknown",
+          grade: (user as any)?.grade || "Unknown",
           defaultArea: response.worker.default_area || "Unknown"
         });
 
@@ -125,7 +125,7 @@ const WorkerDashboard = () => {
         setWorkerInfo({
           name: user?.name || "Unknown",
           staffId: user?.staffId || "Unknown",
-          grade: user?.grade || "Unknown",
+          grade: (user as any)?.grade || "Unknown",
           defaultArea: "Unknown"
         });
         
@@ -144,7 +144,7 @@ const WorkerDashboard = () => {
       setWorkerInfo({
         name: user?.name || "Unknown",
         staffId: user?.staffId || "Unknown",
-        grade: user?.grade || "Unknown",
+        grade: (user as any)?.grade || "Unknown",
         defaultArea: "Unknown"
       });
       

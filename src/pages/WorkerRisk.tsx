@@ -89,7 +89,9 @@ const WorkerRisk = () => {
       if (user?.staffId) {
         try {
           const workerData = await workers.getByStaffId(user.staffId);
-          setWorkerId(workerData.id);
+          // Type assertion for workerData.id
+          setWorkerId((workerData as any).id);
+          setLoading(false);
         } catch (error) {
           console.error("Failed to fetch worker ID:", error);
           toast({
@@ -256,7 +258,8 @@ const WorkerRisk = () => {
   // Check permissions
   const canModify = (entry: RiskEntry): boolean => {
     const isAdmin = user?.role && ["Supervisor", "Accountant", "Director"].includes(user.role);
-    const isCreator = entry.created_by === (user as any)?.id; // Use assertion for user.id
+    // Use assertion for created_by
+    const isCreator = (entry as any).created_by === (user as any)?.id;
     return isAdmin || isCreator;
   };
 

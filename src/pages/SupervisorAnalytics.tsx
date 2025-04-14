@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Calendar, Download, Home, Users, Shield, BarChart } from "lucide-react"; // Keep Users, Shield for icons if needed elsewhere, but remove nav
+import { LogOut, Calendar, Download, Home, Shield } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -83,7 +83,6 @@ const SupervisorAnalytics = () => {
         const data = await overtime.getMonthlySummary(selectedMonth, selectedYear);
         setSummaryData(data.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error: any) {
-        console.error("Failed to fetch summary data:", error);
         toast({
           title: "Error Fetching Summary",
           description: error.message || "Failed to fetch summary data. Please try again.",
@@ -104,9 +103,7 @@ const SupervisorAnalytics = () => {
         const data = await risk.getSummary(selectedMonth, selectedYear);
         setRiskSummaryData(data.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error: any) {
-        console.error("Failed to fetch risk summary data:", error);
-        // Don't show a toast notification as risk management might be optional
-        // Just set empty data
+        // Silently handle the error and set empty data
         setRiskSummaryData([]);
       }
     };

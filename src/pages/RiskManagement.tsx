@@ -91,8 +91,10 @@ const RiskManagement = () => {
     const fetchWorkers = async () => {
       try {
         const data = await workersApi.getAll();
-        const sortedWorkers = [...data].sort((a, b) => a.name.localeCompare(b.name));
-        setWorkers(sortedWorkers);
+        const sortedWorkers = [...data].sort((a: any, b: any) => 
+          a.name?.localeCompare(b.name || '') || 0
+        );
+        setWorkers(sortedWorkers as any);
       } catch (error: any) {
         console.error("Failed to fetch workers:", error);
         toast({

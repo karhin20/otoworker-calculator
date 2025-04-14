@@ -39,7 +39,7 @@ const WorkerPinSetup = () => {
     const fetchWorkers = async () => {
       try {
         const data = await workers.getAll();
-        setWorkersList(data);
+        setWorkersList(data as any);
       } catch (error) {
         notifyError("Failed to load workers");
         console.error("Error loading workers:", error);

@@ -57,7 +57,7 @@ const SupervisorRiskManagement = () => {
     const fetchWorkers = async () => {
       try {
         const data = await workers.getAll();
-        setWorkersList(data);
+        setWorkersList(data as any);
       } catch (error) {
         console.error("Failed to fetch workers:", error);
       }
@@ -430,18 +430,12 @@ const SupervisorRiskManagement = () => {
                   {entry.location}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {entry.status === "approved" ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                  Approved
-                                </Badge>
-                              ) : entry.status === "rejected" ? (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                  Rejected
-                                </Badge>
+                              {(entry as any).status === "approved" ? (
+                                <Badge variant="success" className="text-xs">Approved</Badge>
+                              ) : (entry as any).status === "rejected" ? (
+                                <Badge variant="destructive" className="text-xs">Rejected</Badge>
                               ) : (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                  Pending
-                                </Badge>
+                                <Badge variant="outline" className="text-xs">Pending</Badge>
                               )}
                 </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -608,38 +602,32 @@ const SupervisorRiskManagement = () => {
               <div>
                 <Label className="text-muted-foreground">Status</Label>
                 <p className="font-medium">
-                  {selectedEntry.status === "approved" ? (
-                    <Badge variant="outline" className="mt-1 bg-green-50 text-green-700 border-green-200">
-                      Approved
-                    </Badge>
-                  ) : selectedEntry.status === "rejected" ? (
-                    <Badge variant="outline" className="mt-1 bg-red-50 text-red-700 border-red-200">
-                      Rejected
-                    </Badge>
+                  {(selectedEntry as any).status === "approved" ? (
+                    <Badge variant="success">Approved</Badge>
+                  ) : (selectedEntry as any).status === "rejected" ? (
+                    <Badge variant="destructive">Rejected</Badge>
                   ) : (
-                    <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200">
-                      Pending
-                    </Badge>
+                    <Badge variant="outline">Pending</Badge>
                   )}
                 </p>
               </div>
-              {selectedEntry.approved_by && (
-                <div>
-                  <Label className="text-muted-foreground">Approved By</Label>
-                  <p className="font-medium">{selectedEntry.approved_by}</p>
+              {(selectedEntry as any).approved_by && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <span className="text-gray-500">Approved By:</span>
+                  <p className="font-medium">{(selectedEntry as any).approved_by}</p>
                 </div>
               )}
-              {selectedEntry.approved_at && (
+              {(selectedEntry as any).approved_at && (
                 <div>
                   <Label className="text-muted-foreground">Approved At</Label>
-                  <p className="font-medium">{format(new Date(selectedEntry.approved_at), "PPp")}</p>
+                  <p className="font-medium">{format(new Date((selectedEntry as any).approved_at), "PPp")}</p>
                 </div>
               )}
             </div>
             <DialogFooter className="flex justify-between">
               <div className="space-x-2">
                 {/* Show approve/reject buttons only for pending entries */}
-                {selectedEntry.status === "pending" && (
+                {(selectedEntry as any).status === "pending" && (
                   <>
                     <Button
                       variant="destructive"

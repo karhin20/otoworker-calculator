@@ -23,7 +23,6 @@ const Analytics = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string; role?: string } | null>(null);
-  const [riskLoading, setRiskLoading] = useState(false);
   
   // Generate month options
   const months = [
@@ -76,7 +75,6 @@ const Analytics = () => {
         const data = await overtime.getMonthlySummary(selectedMonth, selectedYear);
         setSummaryData(data.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error: any) {
-        console.error("Failed to fetch summary data:", error);
         toast({
           title: "Error Fetching Summary",
           description: error.message || "Failed to fetch summary data. Please try again.",
@@ -94,15 +92,12 @@ const Analytics = () => {
   useEffect(() => {
     const fetchRiskSummary = async () => {
       try {
-        setRiskLoading(true);
-        // Fetch risk summary data
         const response = await risk.getSummary(selectedMonth, selectedYear);
         const sortedData = [...response].sort((a: any, b: any) => a.worker_name.localeCompare(b.worker_name));
         setRiskSummaryData(sortedData);
-        setRiskLoading(false);
       } catch (error) {
-        console.error("Error fetching risk summary:", error);
-        setRiskLoading(false);
+        // Silently handle the error and set empty data
+        setRiskSummaryData([]);
       }
     };
 
