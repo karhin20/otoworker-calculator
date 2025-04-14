@@ -356,14 +356,12 @@ const WorkerDetails = () => {
 
   // Can user delete this entry?
   const canDelete = (entry: WorkerDetailWithApproval): boolean => {
-    // Standard role can only delete PENDING or REJECTED entries they created
+    // Standard role can only delete PENDING or REJECTED entries
     if (userRole === "Standard") {
-      // Use type assertion to access created_by, assuming it exists
-      return (entry as any).created_by === user?.id && 
-             (entry.approval_status === "Pending" || entry.approval_status === "Rejected");
+      return (entry.approval_status === "Pending" || entry.approval_status === "Rejected");
     }
-    // Supervisor+ can delete any entry
-    return ["Supervisor", "Accountant", "Director"].includes(userRole);
+    // No other roles can delete
+    return false;
   };
 
   // Handle monthly summary editing

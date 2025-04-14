@@ -569,7 +569,7 @@ export const overtime = {
   delete: (entryId: string) => {
     // Clear cache when deleting an entry
     clearCache('overtime/');
-    return apiCall(`overtime/${entryId}`, {
+    return apiCall(`/overtime/${entryId}`, {
       method: "DELETE",
     });
   },
