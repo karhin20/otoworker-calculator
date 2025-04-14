@@ -39,7 +39,7 @@ const MAX_METRICS = 500; // Maximum number of metrics to store
 /**
  * Start timing an operation
  */
-export const startTiming = (endpoint: string, method: string): number => {
+export const startTiming = (_endpoint: string, _method: string): number => {
   // Skip if monitoring is disabled or if this request is not in the sample
   if (!config.enabled || Math.random() > config.sampleRate) {
     return 0;
