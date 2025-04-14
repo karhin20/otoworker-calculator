@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, ChevronLeft, ChevronRight, Pencil, AlertCircle, Clock, CheckCircle2, Home, Calendar, Shield, BarChart, Trash2, Edit, Eye } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight, Pencil, AlertCircle, Clock, CheckCircle2, Home, Calendar, Shield, BarChart, Trash2, Edit } from "lucide-react";
 import { format } from "date-fns"; // Ensure this import is present
 import { workers, overtime } from "@/lib/api";
 import { Worker, WorkerDetail, WorkerDetailWithApproval, ApprovalStatus } from "@/types";

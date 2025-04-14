@@ -34,7 +34,7 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
   });
   const [loading, setLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(true);
-  const [_isAccountantEditMode, setIsAccountantEditMode] = useState(false);
+  const [_isAccountantEditMode, _setIsAccountantEditMode] = useState(false);
   const [confirmReject, setConfirmReject] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [entryTime, setEntryTime] = useState(entry.entry_time || "");
@@ -339,11 +339,6 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
       setIsSubmitting(false);
     }
   };
-
-  // Dummy unused functions replaced with empty functions
-  const handleSwitchChange = () => {};
-  const toggleAccountantEditMode = () => {};
-  const handleUpdate = () => {};
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
