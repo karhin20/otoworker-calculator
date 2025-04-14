@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -38,6 +38,8 @@ export const OvertimeEntry = ({ workers, onSubmit, isSubmitting: externalIsSubmi
   const [category, setCategory] = useState<"A" | "C">("A");
   const [localIsSubmitting, setLocalIsSubmitting] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [holidays, setHolidays] = useState<{date: string; name: string}[]>([]);
+  const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
 
   // Use external isSubmitting state if provided, otherwise use local state
   const isSubmitting = externalIsSubmitting !== undefined ? externalIsSubmitting : localIsSubmitting;
@@ -57,12 +59,51 @@ export const OvertimeEntry = ({ workers, onSubmit, isSubmitting: externalIsSubmi
 
   const calculateOvertimeHours = () => {
     const total = calculateTotalHours();
-    return Math.max(0, total - 8);
+    return Math.max(0, total - 9);
   };
 
+  // Fetch Ghana holidays when component mounts
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      setIsLoadingHolidays(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch('/api/holidays', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch holidays');
+        }
+        
+        const data = await response.json();
+        setHolidays(data);
+      } catch (error) {
+        console.error('Error fetching holidays:', error);
+        // Don't show toast for this, just log the error
+      } finally {
+        setIsLoadingHolidays(false);
+      }
+    };
+    
+    fetchHolidays();
+  }, []);
+
   const getDefaultCategory = (date: Date) => {
+    // Check if it's a weekend
     const day = date.getDay();
-    return day === 0 || day === 6 ? "C" : "A";
+    const isWeekend = day === 0 || day === 6;
+    
+    // Check if it's a holiday
+    const formattedDate = format(date, "yyyy-MM-dd");
+    const isHoliday = holidays.some(holiday => holiday.date === formattedDate);
+    
+    // Category C if it's a weekend or a holiday, otherwise Category A
+    return isWeekend || isHoliday ? "C" : "A";
   };
 
   const handleDateChange = (newDate: Date | undefined) => {
@@ -188,6 +229,37 @@ export const OvertimeEntry = ({ workers, onSubmit, isSubmitting: externalIsSubmi
                 />
               </PopoverContent>
             </Popover>
+            
+            {date && (
+              <>
+                {(() => {
+                  const formattedDate = format(date, "yyyy-MM-dd");
+                  const holiday = holidays.find(h => h.date === formattedDate);
+                  const day = date.getDay();
+                  const isWeekend = day === 0 || day === 6;
+                  
+                  if (holiday) {
+                    return (
+                      <div className="mt-2 p-2 bg-amber-100 text-amber-800 rounded-md text-sm">
+                        Holiday: {holiday.name} (Category C)
+                      </div>
+                    );
+                  } else if (isWeekend) {
+                    return (
+                      <div className="mt-2 p-2 bg-amber-100 text-amber-800 rounded-md text-sm">
+                        Weekend (Category C)
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="mt-2 p-2 bg-blue-100 text-blue-800 rounded-md text-sm">
+                        Weekday (Category A)
+                      </div>
+                    );
+                  }
+                })()}
+              </>
+            )}
           </div>
 
           <div>

@@ -67,8 +67,22 @@ export interface WorkerSummary {
   grade: string;
   category_a_hours: number;
   category_c_hours: number;
+  category_a_amount?: number;
+  category_c_amount?: number;
   transportation_days: number;
   transportation_cost: number;
+  approval_status?: ApprovalStatus;
+  approval_statuses?: ApprovalStatus[];
+  entries?: Array<{id: string; approval_status: ApprovalStatus}>;
+  status_counts?: {
+    Pending: number;
+    Standard: number;
+    Supervisor: number;
+    Accountant: number;
+    Approved: number;
+    Rejected: number;
+    [key: string]: number;
+  };
 }
 
 export interface WorkerDetail {
@@ -120,4 +134,40 @@ export interface RiskSummary {
   grade: string;
   total_entries: number;
   total_amount: number;
+}
+
+// Admin roles for hierarchical approval system
+export type AdminRole = 
+  | "Standard"       // Basic admin - can add entries
+  | "Supervisor"     // District Supervisor - first approval
+  | "Accountant"     // Regional Accountant - can edit amounts
+  | "Director";      // Regional Director - final approval
+
+// Approval status for overtime and transport entries
+export type ApprovalStatus = 
+  | "Pending"        // Initial state
+  | "Standard"       // Approved by Standard Admin
+  | "Supervisor"     // Approved by District Supervisor 
+  | "Accountant"     // Approved by Regional Accountant
+  | "Approved"       // Final approval by Regional Director
+  | "Rejected";      // Rejected at any stage
+
+// Extended worker detail with approval information
+export interface WorkerDetailWithApproval extends WorkerDetail {
+  approval_status: ApprovalStatus;
+  category_a_amount?: number;
+  category_c_amount?: number;
+  approved_by?: string;
+  approved_by_name?: string;
+  approved_at?: string;
+  last_edited_by?: string;
+  last_edited_by_name?: string;
+  last_edited_at?: string;
+  automatically_generated?: boolean;
+  created_by?: string;
+  calculated_amount?: {
+    category_a: number;
+    category_c: number;
+    transport: number;
+  };
 }

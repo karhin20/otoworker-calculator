@@ -1,17 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Worker, WorkerSummary } from "@/types";
-import { OvertimeEntry as OvertimeEntryComponent } from "@/components/OvertimeEntry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Calendar, Users, LogOut, Download, BarChart, Shield } from "lucide-react";
+import { Calendar, Users, LogOut, Download, BarChart, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { workers as workersApi, overtime } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Input } from "@/components/ui/input";
-import { getAndClearNotification, notifySuccess } from "@/utils/notifications";
+import { getAndClearNotification } from "@/utils/notifications";
 
 const ResponsiveTable = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -23,7 +22,7 @@ const ResponsiveTable = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-const Index = () => {
+const SupervisorDashboard = () => {
   const navigate = useNavigate();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [summaryData, setSummaryData] = useState<WorkerSummary[]>([]);
@@ -32,7 +31,6 @@ const Index = () => {
   const [currentYear] = useState(new Date().getFullYear());
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string; role?: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -81,9 +79,15 @@ const Index = () => {
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
-      setUser(JSON.parse(userStr));
+      const userData = JSON.parse(userStr);
+      setUser(userData);
+
+      // Redirect standard users to regular dashboard
+      if (!userData.role || userData.role === "Standard") {
+        navigate("/dashboard");
+      }
     }
-  }, []);
+  }, [navigate]);
 
   // Check for notifications on component mount
   useEffect(() => {
@@ -106,7 +110,7 @@ const Index = () => {
   // Memoize sorted and filtered workers list
   const filteredSummary = useMemo(() => {
     return summaryData
-      .filter((summary) => 
+      .filter((summary) =>
         summary.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         summary.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         summary.grade.toLowerCase().includes(searchQuery.toLowerCase())
@@ -131,39 +135,6 @@ const Index = () => {
 
   // Memoize totals
   const totals = useMemo(() => calculateTotals(), [calculateTotals]);
-
-  // Convert handleAddEntry to a memoized callback
-  const handleAddEntry = useCallback(async (entryData: {
-    worker_id: string;
-    date: string;
-    entry_time: string;
-    exit_time: string;
-    category: 'A' | 'C';
-    category_a_hours: number;
-    category_c_hours: number;
-    transportation: boolean;
-    transportation_cost?: number;
-  }) => {
-    try {
-      setIsSubmitting(true);
-      await overtime.create(entryData);
-      
-      // Set the notification
-      notifySuccess("Overtime entry added successfully!");
-      
-      // Force full reload to ensure the notification is displayed
-      window.location.href = "/dashboard";
-    } catch (error) {
-      console.error("Failed to add entry:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add overtime entry. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, []);
 
   const exportData = (type: 'overtime' | 'transport') => {
     try {
@@ -219,11 +190,11 @@ const Index = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                Welcome to the Overtime, Transportation and Risk Management System
+                Management Portal
               </h1>
               {user ? (
                 <p className="mt-2 text-lg text-gray-600">
-                  Hello, {user.name}! You are logged in as 
+                  Hello, {user.name}! You are logged in as
                   {user.role && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     {user.role} Role
                   </span>}
@@ -241,61 +212,31 @@ const Index = () => {
 
           <Card className="p-4 bg-white shadow-sm">
             <nav className="flex space-x-4">
-              {(!user?.role || user.role === "Standard") && (
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate("/add-worker")}
-                >
-                  <Plus className="mr-2 h-4 w-4" /> Add Worker
-                </Button>
-              )}
               <Button
                 variant="ghost"
-                onClick={() => navigate("/monthly-summary")}
+                onClick={() => navigate("/supervisor-monthly-summary")}
               >
                 <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => navigate("/worker-details")}
-              >
-                <Users className="mr-2 h-4 w-4" /> Staff Details
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => navigate("/analytics")}
+                onClick={() => navigate("/supervisor-analytics")}
               >
                 <BarChart className="mr-2 h-4 w-4" /> Analytics
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => navigate("/risk-management")}
+                onClick={() => navigate("/supervisor-risk-management")}
               >
                 <Shield className="mr-2 h-4 w-4" /> Risk Application
               </Button>
-              {(!user?.role || user.role === "Standard") && (
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate("/worker-pin-setup")}
-                >
-                  <Shield className="mr-2 h-4 w-4" /> Worker PIN Setup
-                </Button>
-              )}
             </nav>
           </Card>
-
-          <div className="grid grid-cols-1 gap-8">
-            <OvertimeEntryComponent 
-              workers={workers} 
-              onSubmit={handleAddEntry} 
-              isSubmitting={isSubmitting} 
-            />
-          </div>
 
           <Card className="p-6 animate-slideIn">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900">
-                Dashboard
+                Management Dashboard
               </h2>
               <div className="w-full sm:w-auto max-w-sm">
                 <Input
@@ -335,84 +276,68 @@ const Index = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-8 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                         Worker
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-8 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                         Staff ID
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-8 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                         Grade
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category A Hours
+                      <th className="px-8 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
+                        Category A (₵)
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category C Hours
+                      <th className="px-8 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
+                        Category C (₵)
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Days
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Transport Amount
+                      <th className="px-8 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
+                        Transport (₵)
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredSummary.map((summary) => (
                       <tr key={summary.worker_id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-8 py-6 whitespace-nowrap text-base font-medium text-gray-900">
                           {summary.name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-500">
                           {summary.staff_id}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-500">
                           {summary.grade}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="text-blue-600 font-bold text-base">
-                            ₵{(summary.category_a_amount ?? (summary.category_a_hours * 2)).toFixed(2)}
-                          </div>
-                          <div className="text-gray-500 text-xs mt-1">
-                            {summary.category_a_hours.toFixed(2)} hrs
-                          </div>
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-500">
+                          <div className="text-blue-600 font-bold text-lg">₵{summary.category_a_amount?.toFixed(2) ?? "0.00"}</div>
+                          <div className="text-gray-500 text-sm mt-1">{summary.category_a_hours?.toFixed(2) ?? "0.00"} hrs</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="text-blue-600 font-bold text-base">
-                            ₵{(summary.category_c_amount ?? (summary.category_c_hours * 3)).toFixed(2)}
-                          </div>
-                          <div className="text-gray-500 text-xs mt-1">
-                            {summary.category_c_hours.toFixed(2)} hrs
-                          </div>
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-500">
+                          <div className="text-blue-600 font-bold text-lg">₵{summary.category_c_amount?.toFixed(2) ?? "0.00"}</div>
+                          <div className="text-gray-500 text-sm mt-1">{summary.category_c_hours?.toFixed(2) ?? "0.00"} hrs</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {summary.transportation_days}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="text-blue-600 font-bold text-base">
-                            ₵{summary.transportation_cost?.toFixed(2) || '0.00'}
-                          </div>
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-500">
+                          <div className="text-blue-600 font-bold text-lg">₵{summary.transportation_cost?.toFixed(2) ?? "0.00"}</div>
+                          <div className="text-gray-500 text-sm mt-1">{summary.transportation_days || 0} days</div>
                         </td>
                       </tr>
                     ))}
                     {filteredSummary.length > 0 && (
                       <tr className="bg-gray-50 font-medium">
-                        <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td colSpan={3} className="px-8 py-6 whitespace-nowrap text-base font-semibold text-gray-900">
                           Monthly Totals
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="text-blue-600 font-bold text-base">₵{totals.categoryAAmount.toFixed(2)}</div>
-                          <div className="text-gray-500 text-xs mt-1">{totals.categoryA.toFixed(2)} hrs</div>
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-900">
+                          <div className="font-medium text-gray-700">{totals.categoryA.toFixed(2)} hrs</div>
+                          <div className="text-blue-600 font-bold text-lg">₵{totals.categoryAAmount.toFixed(2)}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="text-blue-600 font-bold text-base">₵{totals.categoryCAmount.toFixed(2)}</div>
-                          <div className="text-gray-500 text-xs mt-1">{totals.categoryC.toFixed(2)} hrs</div>
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-900">
+                          <div className="font-medium text-gray-700">{totals.categoryC.toFixed(2)} hrs</div>
+                          <div className="text-blue-600 font-bold text-lg">₵{totals.categoryCAmount.toFixed(2)}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="text-blue-600 font-bold text-base">₵{totals.transportCost.toFixed(2)}</div>
+                        <td className="px-8 py-6 whitespace-nowrap text-base text-gray-900">
+                          <div className="font-bold text-lg text-blue-600">₵{totals.transportCost.toFixed(2)}</div>
+                          <div className="text-gray-500 text-sm mt-1">{totals.transportDays.toFixed(0)} days</div>
                         </td>
                       </tr>
                     )}
@@ -422,59 +347,25 @@ const Index = () => {
             )}
           </Card>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <h2 className="text-lg font-medium mb-2">Worker Details</h2>
-              <p className="text-gray-500 mb-4">View and manage worker overtime details.</p>
-              <Button onClick={() => navigate("/worker-details")}>
-                <Users className="mr-2 h-4 w-4" /> Staff Details
-              </Button>
-            </Card>
-
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <h2 className="text-lg font-medium mb-2">Monthly Summary</h2>
-              <p className="text-gray-500 mb-4">View monthly overtime and transport summaries.</p>
-              <Button onClick={() => navigate("/monthly-summary")}>
-                <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
-              </Button>
-            </Card>
-
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <h2 className="text-lg font-medium mb-2">Add Worker</h2>
-              <p className="text-gray-500 mb-4">Register a new worker in the system.</p>
-              <Button onClick={() => navigate("/add-worker")}>
-                <Plus className="mr-2 h-4 w-4" /> Add Worker
-              </Button>
-            </Card>
-
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <h2 className="text-lg font-medium mb-2">Analytics</h2>
-              <p className="text-gray-500 mb-4">View data visualization and insights.</p>
-              <Button onClick={() => navigate("/analytics")}>
-                <BarChart className="mr-2 h-4 w-4" /> Analytics
-              </Button>
-            </Card>
-            
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <h2 className="text-lg font-medium mb-2">Risk Application</h2>
-              <p className="text-gray-500 mb-4">Track and manage worker risk activities.</p>
-              <Button onClick={() => navigate("/risk-management")}>
-                <Shield className="mr-2 h-4 w-4" /> Risk Application
-              </Button>
-            </Card>
-            
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <h2 className="text-lg font-medium mb-2">Worker PIN Setup</h2>
-              <p className="text-gray-500 mb-4">Set or reset worker PINs for clock in/out system access.</p>
-              <Button onClick={() => navigate("/worker-pin-setup")}>
-                <Shield className="mr-2 h-4 w-4" /> PIN Setup
-              </Button>
-            </Card>
-          </div>
+          <Card className="p-6 bg-blue-50 border border-blue-100">
+            <h3 className="text-xl font-semibold text-blue-800 mb-4">Management Role Capabilities</h3>
+            <ul className="space-y-3 ml-6 list-disc text-blue-700">
+              <li>Review and approve worker overtime and transportation entries according to role</li>
+              <li>View and manage risk entries for workers</li>
+              <li>Generate reports and analytics for your team</li>
+              <li>Export data for monthly reports</li>
+              {user?.role === "Accountant" && (
+                <li>Edit amounts for worker overtime and transportation entries</li>
+              )}
+              {user?.role === "Director" && (
+                <li>Final approval of worker entries after accountant review</li>
+              )}
+            </ul>
+          </Card>
         </div>
       </div>
     </ErrorBoundary>
   );
 };
 
-export default Index;
+export default SupervisorDashboard;

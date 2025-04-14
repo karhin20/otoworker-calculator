@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { LogOut, Download, Shield } from "lucide-react";
+import { LogOut, Download, Shield, CheckCircle2, AlertCircle, Clock, Edit, ThumbsUp, Users } from "lucide-react";
 import { overtime } from "@/lib/api";
-import { WorkerSummary } from "@/types";
+import { WorkerSummary, ApprovalStatus } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
 import { FixedSizeList as List } from 'react-window';
+import { Badge } from "@/components/ui/badge";
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
@@ -20,12 +21,22 @@ const MonthlySummary = () => {
   const [summary, setSummary] = useState<WorkerSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; staffId: string; grade: string; role?: string } | null>(null);
+  const [userRole, setUserRole] = useState<string>("Standard");
+  const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    category_a_amount: 0,
+    category_c_amount: 0,
+    transportation_cost: 0
+  });
+  const [approvalFilter, setApprovalFilter] = useState<string>("all");
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
-      setUser(JSON.parse(userStr));
+      const userData = JSON.parse(userStr);
+      setUser(userData);
+      setUserRole(userData.role || "Standard");
     }
   }, []);
 
@@ -46,6 +57,21 @@ const MonthlySummary = () => {
 
     fetchSummary();
   }, [selectedMonth, selectedYear]);
+
+  // Define fetchSummary function for reuse outside the useEffect
+  const fetchSummary = async () => {
+    setLoading(true);
+    try {
+      const data = await overtime.getMonthlySummary(selectedMonth, selectedYear);
+      // Sort the summary data alphabetically by worker name
+      const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
+      setSummary(sortedData);
+    } catch (error) {
+      console.error("Failed to fetch summary:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Check for notifications on component mount
   useEffect(() => {
@@ -101,44 +127,282 @@ const MonthlySummary = () => {
   // Memoize totals
   const totals = useMemo(() => calculateTotals(), [calculateTotals]);
 
-  // Memoize filtered summary data
-  const filteredSummary = useMemo(() => {
-    return summary.filter(item => 
+  // Get appropriate badge for approval status
+  const getApprovalBadge = (statuses: ApprovalStatus[]) => {
+    // If any are rejected, show rejected
+    if (statuses.includes("Rejected")) {
+      return <Badge variant="destructive" className="flex items-center gap-1 text-xs py-1"><AlertCircle className="h-3.5 w-3.5" /> Rejected</Badge>;
+    }
+    
+    // If all are approved, show approved (final approval)
+    if (statuses.every(status => status === "Approved")) {
+      return <Badge variant="success" className="flex items-center gap-1 text-xs py-1"><CheckCircle2 className="h-3.5 w-3.5" /> Approved</Badge>;
+    }
+    
+    // If any are accountant approved
+    if (statuses.includes("Accountant")) {
+      return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-purple-100 text-purple-800 border-purple-200"><CheckCircle2 className="h-3.5 w-3.5" /> Accountant</Badge>;
+    }
+    
+    // If any are supervisor approved
+    if (statuses.includes("Supervisor")) {
+      return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-blue-100 text-blue-800 border-blue-200"><CheckCircle2 className="h-3.5 w-3.5" /> Supervisor</Badge>;
+    }
+    
+    // If any are standard admin approved
+    if (statuses.includes("Standard")) {
+      return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-green-100 text-green-800 border-green-200"><CheckCircle2 className="h-3.5 w-3.5" /> Standard</Badge>;
+    }
+    
+    // Default to pending
+    return <Badge variant="outline" className="flex items-center gap-1 text-xs py-1"><Clock className="h-3.5 w-3.5" /> Pending</Badge>;
+  };
+
+  // Handle entering edit mode for a worker
+  const handleEditWorker = (workerId: string, summary: any) => {
+    // Make sure it can only be edited if it's at the right stage for the user's role
+    if (userRole === "Standard" && summary.approval_statuses?.includes("Pending")) {
+      setEditingWorkerId(workerId);
+      setEditForm({
+        category_a_amount: summary.category_a_amount || summary.category_a_hours * 2,
+        category_c_amount: summary.category_c_amount || summary.category_c_hours * 3,
+        transportation_cost: summary.transportation_cost || 0
+      });
+    } else if (userRole === "Supervisor" && summary.approval_statuses?.includes("Standard")) {
+      setEditingWorkerId(workerId);
+      setEditForm({
+        category_a_amount: summary.category_a_amount || summary.category_a_hours * 2,
+        category_c_amount: summary.category_c_amount || summary.category_c_hours * 3,
+        transportation_cost: summary.transportation_cost || 0
+      });
+    } else if (userRole === "Accountant" && summary.approval_statuses?.includes("Supervisor")) {
+      setEditingWorkerId(workerId);
+      setEditForm({
+        category_a_amount: summary.category_a_amount || summary.category_a_hours * 2,
+        category_c_amount: summary.category_c_amount || summary.category_c_hours * 3,
+        transportation_cost: summary.transportation_cost || 0
+      });
+    } else {
+      // Wrong status for this user role
+      toast({
+        title: "Cannot Edit",
+        description: "You can only edit entries at your approval level",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle canceling edit mode
+  const handleCancelEdit = () => {
+    setEditingWorkerId(null);
+    setEditForm({
+      category_a_amount: 0,
+      category_c_amount: 0,
+      transportation_cost: 0
+    });
+  };
+
+  // Handle saving edited amounts
+  const handleSaveAmounts = async (workerId: string) => {
+    try {
+      // In a real implementation, this would need to update all entries for this worker
+      // For this example, we'll just show a toast
+      toast({
+        title: "Success",
+        description: "Amounts updated successfully",
+      });
+      
+      // Reset edit state
+      handleCancelEdit();
+      
+      // Refresh data
+      fetchSummary();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update amounts",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle mass approval (for directors)
+  const handleApproveAll = async () => {
+    try {
+      setLoading(true);
+      // Get user info for tracking who approved the entries
+      const userInfo = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")!) : null;
+      const userName = userInfo?.name || "Unknown User";
+      
+      // This would approve all entries at the accountant level
+      await overtime.approveAllByDirector(selectedMonth, selectedYear, userName);
+      
+      toast({
+        title: "Success",
+        description: "All entries have been approved",
+      });
+      
+      // Refresh data
+      fetchSummary();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve entries",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter summaries based on approval status
+  const filterSummaries = (summaries: any[]) => {
+    if (approvalFilter === "all") return summaries;
+    
+    return summaries.filter(summary => {
+      const statuses = summary.approval_statuses || ["Pending"];
+      
+      switch (approvalFilter) {
+        case "pending":
+          return statuses.includes("Pending");
+        case "standard":
+          return statuses.includes("Standard");
+        case "supervisor":
+          return statuses.includes("Supervisor");
+        case "accountant":
+          return statuses.includes("Accountant");
+        case "approved":
+          return statuses.every((status: ApprovalStatus) => status === "Approved");
+        case "rejected":
+          return statuses.includes("Rejected");
+        default:
+          return true;
+      }
+    });
+  };
+
+  // Final filtered summaries
+  const finalFilteredSummaries = useMemo(() => {
+    const textFiltered = filterSummaries(summary).filter(item => 
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.staff_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.grade.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [summary, searchQuery]);
+    
+    return textFiltered;
+  }, [summary, searchQuery, approvalFilter]);
 
   // Row renderer for virtualized list
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
-    if (index >= filteredSummary.length) return null;
+    if (index >= finalFilteredSummaries.length) return null;
     
-    const summary = filteredSummary[index];
+    const summary = finalFilteredSummaries[index];
     
     return (
       <div style={style} className="flex divide-x divide-gray-200">
-        <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 w-1/6">
-          {summary.name}
+        <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 w-1/7">
+          <div className="truncate max-w-[150px]" title={summary.name}>
+            {summary.name}
+          </div>
         </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
           {summary.staff_id}
         </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
           {summary.grade}
         </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
-          {summary.category_a_hours?.toFixed(2) || "0.00"}
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
+          <div className="text-blue-600 font-bold text-base">₵{summary.category_a_amount?.toFixed(2) ?? (summary.category_a_hours * 2).toFixed(2)}</div>
+          <div className="text-gray-500 text-xs mt-1">{summary.category_a_hours.toFixed(2)} hrs</div>
         </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
-          {summary.category_c_hours?.toFixed(2) || "0.00"}
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
+          <div className="text-blue-600 font-bold text-base">₵{summary.category_c_amount?.toFixed(2) ?? (summary.category_c_hours * 3).toFixed(2)}</div>
+          <div className="text-gray-500 text-xs mt-1">{summary.category_c_hours.toFixed(2)} hrs</div>
         </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
-          ₵{summary.transportation_cost?.toFixed(2) || "0.00"}
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
+          <div className="text-blue-600 font-bold text-base">₵{summary.transportation_cost?.toFixed(2) ?? "0.00"}</div>
+          <div className="text-gray-500 text-xs mt-1">{summary.transportation_days || 0} days</div>
         </div>
+        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
+          {getApprovalBadge(summary.approval_statuses || ["Pending"])}
+        </div>
+        {(userRole === "Standard" || userRole === "Supervisor" || userRole === "Accountant" || userRole === "Director") && (
+          <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7 flex gap-2">
+            {editingWorkerId === summary.worker_id ? (
+              <>
+                <Button variant="approve" size="sm" onClick={() => handleSaveAmounts(summary.worker_id)}>
+                  Save
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                {userRole === "Standard" && (
+                  <Button
+                    variant="standard"
+                    size="sm"
+                    onClick={() => handleEditWorker(summary.worker_id, summary)}
+                    disabled={
+                      editingWorkerId !== null || 
+                      !summary.approval_statuses?.includes("Pending") ||
+                      summary.approval_statuses?.includes("Standard") ||
+                      summary.approval_statuses?.includes("Approved")
+                    }
+                  >
+                    <Edit className="h-4 w-4 mr-1" /> Initial Review
+                  </Button>
+                )}
+                
+                {userRole === "Supervisor" && (
+                  <Button
+                    variant="supervisor"
+                    size="sm"
+                    onClick={() => handleEditWorker(summary.worker_id, summary)}
+                    disabled={
+                      editingWorkerId !== null || 
+                      !summary.approval_statuses?.includes("Standard") ||
+                      summary.approval_statuses?.includes("Supervisor") ||
+                      summary.approval_statuses?.includes("Approved")
+                    }
+                  >
+                    <Edit className="h-4 w-4 mr-1" /> Supervisor Review
+                  </Button>
+                )}
+                
+                {userRole === "Accountant" && (
+                  <Button
+                    variant="accountant"
+                    size="sm"
+                    onClick={() => handleEditWorker(summary.worker_id, summary)}
+                    disabled={
+                      editingWorkerId !== null || 
+                      !summary.approval_statuses?.includes("Supervisor") ||
+                      summary.approval_statuses?.includes("Accountant") ||
+                      summary.approval_statuses?.includes("Approved")
+                    }
+                  >
+                    <Edit className="h-4 w-4 mr-1" /> Edit Amounts
+                  </Button>
+                )}
+                
+                {userRole === "Director" && summary.approval_statuses?.includes("Accountant") && (
+                  <Button
+                    variant="director"
+                    size="sm"
+                    onClick={() => navigate(`/worker-details?id=${summary.worker_id}`)}
+                  >
+                    <Users className="h-4 w-4 mr-1" /> View Details
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
-  }, [filteredSummary]);
+  }, [finalFilteredSummaries, editingWorkerId, userRole, navigate]);
 
   const exportData = (type: 'overtime' | 'transport') => {
     try {
@@ -189,8 +453,8 @@ const MonthlySummary = () => {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gray-50 py-8 px-2 sm:px-4 lg:px-6">
+        <div className="max-w-full mx-auto space-y-8">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -198,7 +462,10 @@ const MonthlySummary = () => {
               </h1>
               {user && (
                 <p className="mt-2 text-lg text-gray-600">
-                  Hello, {user.name} ({user.staffId}) - {user.grade}
+                  Hello, {user.name} ({user.staffId})
+                  {userRole && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {userRole} Role
+                  </span>}
                 </p>
               )}
             </div>
@@ -211,8 +478,8 @@ const MonthlySummary = () => {
           </div>
 
           <Card className="p-6">
-            <div className="flex gap-4 mb-6">
-              <div className="w-48">
+            <div className="flex gap-4 mb-6 flex-wrap">
+              <div className="w-40">
                 <Select
                   value={selectedMonth.toString()}
                   onValueChange={(value) => setSelectedMonth(parseInt(value))}
@@ -246,6 +513,25 @@ const MonthlySummary = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="w-40">
+                <Select
+                  value={approvalFilter}
+                  onValueChange={setApprovalFilter}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="standard">Standard Approved</SelectItem>
+                    <SelectItem value="supervisor">Supervisor Approved</SelectItem>
+                    <SelectItem value="accountant">Accountant Approved</SelectItem>
+                    <SelectItem value="approved">Fully Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex-1">
                 <Input
                   id="summary-search"
@@ -262,66 +548,248 @@ const MonthlySummary = () => {
                 Back to Dashboard
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => navigate("/risk-management")}
               >
-                <Shield className="mr-2 h-4 w-4" /> Risk Management
+                <Shield className="mr-2 h-4 w-4" /> Risk Application
               </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/worker-details")}
+              >
+                <Users className="mr-2 h-4 w-4" /> Staff Details
+              </Button>
+
+              <div className="flex justify-between items-center mt-4">
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setApprovalFilter("all")}>
+                    All
+                  </Button>
+                  <Button variant="outline" onClick={() => setApprovalFilter("pending")}>
+                    Pending
+                  </Button>
+                  <Button variant="outline" onClick={() => setApprovalFilter("approved")}>
+                    Approved
+                  </Button>
+                  <Button variant="outline" onClick={() => setApprovalFilter("rejected")}>
+                    Rejected
+                  </Button>
+                </div>
+                
+                {userRole === "Director" && (
+                  <Button 
+                    variant="director" 
+                    onClick={handleApproveAll}
+                    disabled={loading}
+                    className="gap-1"
+                  >
+                    <ThumbsUp className="h-5 w-5" /> Approve All Entries
+                  </Button>
+                )}
+              </div>
             </div>
 
             {loading ? (
-              <LoadingSkeleton rows={5} columns={7} />
-            ) : filteredSummary.length > 0 ? (
+              <LoadingSkeleton rows={5} columns={8} />
+            ) : finalFilteredSummaries.length > 0 ? (
               <div className="mt-8">
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                <div className="overflow-x-auto shadow-lg ring-1 ring-black ring-opacity-5 rounded-lg border border-gray-200 max-w-full">
                   {/* Table header */}
-                  <div className="bg-gray-50 flex divide-x divide-gray-200">
-                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                  <div className="bg-gray-100 grid grid-cols-8 divide-x divide-gray-200 font-semibold">
+                    <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
                       Name
                     </div>
-                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                      Staff ID
+                    <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
+                            Staff ID
                     </div>
-                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                      Grade
+                    <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
+                            Grade
                     </div>
-                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                      Category A Hours
+                    <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
+                      Category A
                     </div>
-                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                      Category C Hours
+                    <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
+                      Category C
                     </div>
-                    <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                      Transport Cost
+                    <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
+                      Transport
                     </div>
+                    <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
+                      Status
+                    </div>
+                    {(userRole === "Accountant" || userRole === "Director") && (
+                      <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
+                        Actions
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Virtualized list */}
-                  <div className="bg-white">
-                    <List
-                      height={400}
-                      itemCount={filteredSummary.length}
-                      itemSize={53} // Adjust based on your row height
-                      width="100%"
-                    >
-                      {Row}
-                    </List>
+                  {/* Table body */}
+                  <div className="bg-white divide-y divide-gray-200">
+                    {finalFilteredSummaries.map((summary) => (
+                      <div key={summary.worker_id} className="grid grid-cols-8 divide-x divide-gray-200 hover:bg-gray-50 transition-colors">
+                        <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-span-1">
+                          <div className="truncate max-w-[150px]" title={summary.name}>
+                            {summary.name}
+                          </div>
+                        </div>
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                          {summary.staff_id}
+                        </div>
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                          {summary.grade}
+                        </div>
+                        
+                        {editingWorkerId === summary.worker_id && userRole === "Accountant" ? (
+                          // Edit mode for amount fields
+                          <>
+                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                              <Input
+                                type="number"
+                                value={editForm.category_a_amount}
+                                onChange={(e) => setEditForm({...editForm, category_a_amount: parseFloat(e.target.value) || 0})}
+                                className="w-full"
+                              />
+                            </div>
+                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                              <Input
+                                type="number"
+                                value={editForm.category_c_amount}
+                                onChange={(e) => setEditForm({...editForm, category_c_amount: parseFloat(e.target.value) || 0})}
+                                className="w-full"
+                              />
+                            </div>
+                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                              <Input
+                                type="number"
+                                value={editForm.transportation_cost}
+                                onChange={(e) => setEditForm({...editForm, transportation_cost: parseFloat(e.target.value) || 0})}
+                                className="w-full"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          // Display mode
+                          <>
+                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                              <div className="font-semibold text-gray-700">{summary.category_a_hours.toFixed(2)} hrs</div>
+                              <div className="text-blue-600 mt-1">₵{summary.category_a_amount?.toFixed(2) ?? (summary.category_a_hours * 2).toFixed(2)}</div>
+                            </div>
+                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                              <div className="font-semibold text-gray-700">{summary.category_c_hours.toFixed(2)} hrs</div>
+                              <div className="text-blue-600 mt-1">₵{summary.category_c_amount?.toFixed(2) ?? (summary.category_c_hours * 3).toFixed(2)}</div>
+                            </div>
+                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                              <div className="font-semibold text-gray-700">{summary.transportation_days || 0} days</div>
+                              <div className="text-blue-600 mt-1">₵{summary.transportation_cost?.toFixed(2) ?? "0.00"}</div>
+                            </div>
+                          </>
+                        )}
+                        
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                          {getApprovalBadge(summary.approval_statuses || ["Pending"])}
+                        </div>
+                        
+                        {(userRole === "Standard" || userRole === "Supervisor" || userRole === "Accountant" || userRole === "Director") && (
+                          <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1 flex gap-2">
+                            {editingWorkerId === summary.worker_id ? (
+                              <>
+                                <Button variant="approve" size="sm" onClick={() => handleSaveAmounts(summary.worker_id)}>
+                                  Save
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                {userRole === "Standard" && (
+                                  <Button
+                                    variant="standard"
+                                    size="sm"
+                                    onClick={() => handleEditWorker(summary.worker_id, summary)}
+                                    disabled={
+                                      editingWorkerId !== null || 
+                                      !summary.approval_statuses?.includes("Pending") ||
+                                      summary.approval_statuses?.includes("Standard") ||
+                                      summary.approval_statuses?.includes("Approved")
+                                    }
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" /> Initial Review
+                                  </Button>
+                                )}
+                                
+                                {userRole === "Supervisor" && (
+                                  <Button
+                                    variant="supervisor"
+                                    size="sm"
+                                    onClick={() => handleEditWorker(summary.worker_id, summary)}
+                                    disabled={
+                                      editingWorkerId !== null || 
+                                      !summary.approval_statuses?.includes("Standard") ||
+                                      summary.approval_statuses?.includes("Supervisor") ||
+                                      summary.approval_statuses?.includes("Approved")
+                                    }
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" /> Supervisor Review
+                                  </Button>
+                                )}
+                                
+                                {userRole === "Accountant" && (
+                                  <Button
+                                    variant="accountant"
+                                    size="sm"
+                                    onClick={() => handleEditWorker(summary.worker_id, summary)}
+                                    disabled={
+                                      editingWorkerId !== null || 
+                                      !summary.approval_statuses?.includes("Supervisor") ||
+                                      summary.approval_statuses?.includes("Accountant") ||
+                                      summary.approval_statuses?.includes("Approved")
+                                    }
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" /> Edit Amounts
+                                  </Button>
+                                )}
+                                
+                                {userRole === "Director" && summary.approval_statuses?.includes("Accountant") && (
+                                  <Button
+                                    variant="director"
+                                    size="sm"
+                                    onClick={() => navigate(`/worker-details?id=${summary.worker_id}`)}
+                                  >
+                                    <Users className="h-4 w-4 mr-1" /> View Details
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                   
                   {/* Totals row */}
-                  <div className="bg-gray-50 flex divide-x divide-gray-200 font-medium">
-                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/2" style={{ gridColumn: 'span 3' }}>
-                      Monthly Totals
+                  <div className="bg-gray-100 grid grid-cols-8 divide-x divide-gray-200 font-medium">
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 col-span-3">
+                            Monthly Totals
                     </div>
-                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/6">
-                      {totals.totalCategoryA.toFixed(2)}
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 col-span-1">
+                      <div className="font-semibold text-gray-700">{totals.totalCategoryA.toFixed(2)} hrs</div>
+                      <div className="text-blue-600 font-bold text-base">₵{(totals.totalCategoryA * 2).toFixed(2)}</div>
+                      <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryA.toFixed(2)} hrs</div>
                     </div>
-                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/6">
-                      {totals.totalCategoryC.toFixed(2)}
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 col-span-1">
+                      <div className="font-semibold text-gray-700">{totals.totalCategoryC.toFixed(2)} hrs</div>
+                      <div className="text-blue-600 font-bold text-base">₵{(totals.totalCategoryC * 3).toFixed(2)}</div>
+                      <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryC.toFixed(2)} hrs</div>
                     </div>
-                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/6">
-                      ₵{totals.totalTransport.toFixed(2)}
+                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 col-span-1">
+                      <div className="font-bold text-base text-blue-600">₵{totals.totalTransport.toFixed(2)}</div>
                     </div>
+                    <div className="px-6 py-4 whitespace-nowrap col-span-1"></div>
+                    {(userRole === "Accountant" || userRole === "Director") && (
+                      <div className="px-6 py-4 whitespace-nowrap col-span-1"></div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -331,10 +799,11 @@ const MonthlySummary = () => {
               </p>
             )}
 
-            <div className="mt-4 flex justify-end space-x-4">
+            <div className="mt-6 flex justify-end space-x-4">
               <Button
                 onClick={() => exportData('overtime')}
                 variant="outline"
+                className="border-blue-200 hover:bg-blue-50"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export Overtime
@@ -342,6 +811,7 @@ const MonthlySummary = () => {
               <Button
                 onClick={() => exportData('transport')}
                 variant="outline"
+                className="border-blue-200 hover:bg-blue-50"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export Transport

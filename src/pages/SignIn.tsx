@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, UserCog, Users, HardHat } from "lucide-react";
 import { admin } from "@/lib/api"; // Import the API utility
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -33,14 +34,21 @@ const SignIn = () => {
       expiryDate.setHours(expiryDate.getHours() + 24);  
       localStorage.setItem("tokenExpiry", expiryDate.toISOString());
 
-      localStorage.setItem("user", JSON.stringify({
+      const userData = {
         name: data.user.name,
         staffId: data.user.staffId,
-        grade: data.user.grade
-      }));
+        grade: data.user.grade,
+        role: data.user.role
+      };
       
-      // Redirect to dashboard
-      navigate("/dashboard");
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      // Redirect based on role
+      if (userData.role && ['Supervisor', 'Accountant', 'Director'].includes(userData.role)) {
+        navigate("/supervisor-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err: any) {
       console.error("Sign in error:", err); // Enhanced error logging
       setError(err.message);
@@ -58,20 +66,27 @@ const SignIn = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md space-y-8 p-8">
-        <div>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-            Sign in to your account
+      <Card className="w-full max-w-md p-8 border-t-4 border-indigo-600">
+        <Tabs defaultValue="admin" className="w-full mb-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="admin" className="data-[state=active]:bg-indigo-100">
+              <UserCog className="h-4 w-4 mr-2" />
+              Admin
+            </TabsTrigger>
+            <TabsTrigger value="worker" onClick={() => navigate("/worker-signin")} className="data-[state=active]:bg-green-100">
+              <HardHat className="h-4 w-4 mr-2" />
+              Staff
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="text-center mb-6">
+          <UserCog className="h-12 w-12 mx-auto text-indigo-600" />
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">
+            Administrator Sign In
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Or{" "}
-            <Button
-              variant="link"
-              className="font-medium text-primary"
-              onClick={() => navigate("/signup")}
-            >
-              create a new account
-            </Button>
+            Access supervisor, accountant, or director dashboards
           </p>
         </div>
 
@@ -112,10 +127,10 @@ const SignIn = () => {
           <div className="space-y-4">
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
               disabled={loading}
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Signing in..." : "Sign in as Administrator"}
             </Button>
             <Button
               type="button"
@@ -127,6 +142,17 @@ const SignIn = () => {
             </Button>
           </div>
         </form>
+        
+        <div className="mt-6 pt-4 border-t text-sm text-center text-gray-500">
+          <p>Are you staff looking to clock in/out?</p>
+          <Button 
+            variant="link" 
+            className="text-green-600 font-medium" 
+            onClick={() => navigate("/worker-signin")}
+          >
+            Go to Staff Sign In
+          </Button>
+        </div>
       </Card>
     </div>
   );

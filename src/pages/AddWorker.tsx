@@ -43,6 +43,15 @@ const AddWorker = () => {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [user, setUser] = useState<{ name: string; staffId: string; grade: string; role?: string } | null>(null);
+
+  // Load user data
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   // Check for notifications on component mount
   useEffect(() => {
@@ -167,7 +176,7 @@ const AddWorker = () => {
             variant="outline"
             onClick={() => navigate("/worker-details")}
           >
-            Worker Details
+            Staff Details
           </Button>
           <Button
             variant="outline"
@@ -180,6 +189,14 @@ const AddWorker = () => {
         <Card className="p-6 space-y-6 animate-slideIn">
           <div className="space-y-2">
             <h1 className="text-2xl font-bold tracking-tight">Add New Worker</h1>
+            {user && (
+              <p className="mt-2 text-lg text-gray-600">
+                Hello, {user.name} ({user.staffId})
+                {user.role && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {user.role} Role
+                </span>}
+              </p>
+            )}
             <p className="text-gray-500">Enter the worker's details below.</p>
           </div>
 

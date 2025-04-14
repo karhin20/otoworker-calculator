@@ -25,7 +25,7 @@ const RiskManagement = () => {
   const [submitting, setSubmitting] = useState(false);
   const [entries, setEntries] = useState<RiskEntry[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
-  const [user, setUser] = useState<{ name: string; staffId: string; grade: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; staffId: string; grade: string; role?: string } | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -171,7 +171,7 @@ const RiskManagement = () => {
       
       toast({
         title: "Success",
-        description: "Risk management entry added successfully.",
+        description: "Risk Application entry added successfully.",
       });
     } catch (error: any) {
       console.error("Failed to add risk entry:", error);
@@ -300,7 +300,7 @@ const RiskManagement = () => {
       
       toast({
         title: "Export Successful",
-        description: "Risk management data has been exported successfully.",
+        description: "Risk Application data has been exported successfully.",
         variant: "default",
       });
     } catch (error) {
@@ -377,7 +377,7 @@ const RiskManagement = () => {
       
       toast({
         title: "Export Successful",
-        description: `Risk management data for ${getWorkerNameById(selectedWorker)} has been exported successfully.`,
+        description: `Risk Application data for ${getWorkerNameById(selectedWorker)} has been exported successfully.`,
         variant: "default",
       });
     } catch (error) {
@@ -403,15 +403,14 @@ const RiskManagement = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                Risk Management
+                Risk Application
               </h1>
-              {user ? (
+              {user && (
                 <p className="mt-2 text-lg text-gray-600">
-                  Hello, {user.name}! You are viewing risk entries for {months.find(m => m.value === selectedMonth)?.label} {selectedYear}.
-                </p>
-              ) : (
-                <p className="mt-2 text-lg text-gray-600">
-                  Please log in to access your details.
+                  Hello, {user.name} ({user.staffId})
+                  {user.role && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {user.role} Role
+                  </span>}
                 </p>
               )}
             </div>
@@ -432,7 +431,7 @@ const RiskManagement = () => {
                 variant="ghost"
                 onClick={() => navigate("/worker-details")}
               >
-                <Users className="mr-2 h-4 w-4" /> Worker Details
+                <Users className="mr-2 h-4 w-4" /> Staff Details
               </Button>
               <Button
                 variant="ghost"
@@ -613,7 +612,7 @@ const RiskManagement = () => {
                 <TabsContent value="worker-details">
                   <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
                     <h2 className="text-xl font-semibold text-gray-800">
-                      Worker Risk Management Details
+                      Worker Risk Application Details
                     </h2>
                     <div className="flex flex-wrap gap-4">
                       <div className="flex items-center space-x-2">
