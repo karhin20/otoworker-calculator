@@ -233,4 +233,20 @@ export const logRecentMetrics = (count: number = 10): void => {
     status: m.status,
     time: new Date(m.startTime).toISOString()
   })));
-}; 
+};
+
+// Log request metrics
+export const logRequestMetrics = (
+  _endpoint: string,
+  _method: string,
+  duration: number,
+  responseSize: number,
+  wasError: boolean,
+  fromCache: boolean,
+  statusCode?: number
+): void => {
+  if (!config.enabled) return;
+  
+  // Just log basic metrics for now
+  console.log(`Request metrics: ${duration}ms, ${responseSize}b, error: ${wasError}, cache: ${fromCache}, status: ${statusCode || 'unknown'}`);
+} 

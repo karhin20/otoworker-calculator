@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, Shield, LogOut, Download, ChevronLeft, ChevronRight, Users, CheckCircle2, AlertCircle } from "lucide-react";
+import { Clock, Shield, LogOut, Download, ChevronLeft, ChevronRight, Users, CheckCircle2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Worker, WorkerDetail, WorkerDetailWithApproval, ApprovalStatus } from "@/types";
 import { workers, overtime } from "@/lib/api";

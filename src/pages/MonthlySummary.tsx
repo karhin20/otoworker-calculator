@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { LogOut, Download, Shield, CheckCircle2, AlertCircle, Clock, Edit, ThumbsUp } from "lucide-react";
+import { LogOut, Download, Shield, CheckCircle2, AlertCircle, Clock, Edit, ThumbsUp, Users } from "lucide-react";
 import { overtime } from "@/lib/api";
 import { WorkerSummary, ApprovalStatus } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";

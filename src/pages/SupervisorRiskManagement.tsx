@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Home, Calendar, Users, ChevronLeft, ChevronRight, Search, Download, CheckCircle2, XCircle, BarChart } from "lucide-react";
+import { LogOut, Home, Calendar, ChevronLeft, ChevronRight, Search, Download, CheckCircle2, XCircle, BarChart } from "lucide-react";
 import { format } from "date-fns";
-import { workers, risk } from "@/lib/api";
+import { workers as workersApi, risk } from "@/lib/api";
 import { Worker, RiskEntry } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
@@ -29,7 +29,7 @@ const SupervisorRiskManagement = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [riskEntries, setRiskEntries] = useState<RiskEntry[]>([]);
-  const [workersList, setWorkersList] = useState<Worker[]>([]);
+  const [_workersList, setWorkersList] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string; role?: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,8 +56,8 @@ const SupervisorRiskManagement = () => {
   useEffect(() => {
     const fetchWorkers = async () => {
       try {
-        const data = await workers.getAll();
-        setWorkersList(data as any);
+        const data = await workersApi.getAll();
+        setWorkersList(data);
       } catch (error) {
         console.error("Failed to fetch workers:", error);
       }

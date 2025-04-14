@@ -6,7 +6,7 @@ import { Clock, Calendar, Shield, LogOut, PieChart, TimerOff, Timer, ChevronRigh
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
 import { Worker } from "@/types";
-import { workers, overtime, Clock as ClockApi } from "@/lib/api";
+import { workers, Clock as ClockApi } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -15,9 +15,9 @@ const WorkerDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<{ id?: string; name: string; staffId: string; role?: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [workerDbId, setWorkerDbId] = useState<string | null>(null);
-  const [currentMonth] = useState(new Date().getMonth() + 1);
-  const [currentYear] = useState(new Date().getFullYear());
+  const [_workerDbId, setWorkerDbId] = useState<string | null>(null);
+  const [_currentMonth] = useState(new Date().getMonth() + 1);
+  const [_currentYear] = useState(new Date().getFullYear());
   const [summary, setSummary] = useState<{
     overtimeHours: number;
     transportDays: number;

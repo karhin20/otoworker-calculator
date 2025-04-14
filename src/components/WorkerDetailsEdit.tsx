@@ -34,7 +34,7 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
   });
   const [loading, setLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(true);
-  const [isAccountantEditMode, setIsAccountantEditMode] = useState(false);
+  const [_isAccountantEditMode, setIsAccountantEditMode] = useState(false);
   const [confirmReject, setConfirmReject] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [entryTime, setEntryTime] = useState(entry.entry_time || "");
@@ -117,14 +117,14 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
   // Calculate amounts based on hours
   useEffect(() => {
     // Only auto-calculate if not in accountant edit mode
-    if (!isAccountantEditMode) {
+    if (!_isAccountantEditMode) {
       setFormData(prev => ({
         ...prev,
         category_a_amount: prev.category_a_hours * 2,
         category_c_amount: prev.category_c_hours * 3
       }));
     }
-  }, [formData.category_a_hours, formData.category_c_hours, isAccountantEditMode]);
+  }, [formData.category_a_hours, formData.category_c_hours, _isAccountantEditMode]);
 
   // Helper function to determine the next approval status based on current status and user role
   const getNextApprovalStatus = (currentStatus: string, userRole: string): string => {
