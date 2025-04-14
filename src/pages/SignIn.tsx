@@ -5,9 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, UserCog, Users, HardHat } from "lucide-react";
+import { AlertCircle, UserCog, HardHat } from "lucide-react";
 import { admin } from "@/lib/api"; // Import the API utility
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SignIn = () => {
   const navigate = useNavigate();

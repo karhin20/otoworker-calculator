@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Worker, WorkerSummary } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Users, LogOut, Download, BarChart, Shield } from "lucide-react";
+import { Calendar, LogOut, Download, BarChart, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { workers as workersApi, overtime } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -24,7 +24,7 @@ const ResponsiveTable = ({ children }: { children: React.ReactNode }) => {
 
 const SupervisorDashboard = () => {
   const navigate = useNavigate();
-  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [_workers, setWorkers] = useState<Worker[]>([]);
   const [summaryData, setSummaryData] = useState<WorkerSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentMonth] = useState(new Date().getMonth() + 1);

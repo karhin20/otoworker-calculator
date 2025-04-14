@@ -4,14 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { LogOut, Download, Shield, CheckCircle2, AlertCircle, Clock, Edit, ThumbsUp, Users } from "lucide-react";
+import { LogOut, Download, Shield, CheckCircle2, AlertCircle, Clock, Edit, ThumbsUp } from "lucide-react";
 import { overtime } from "@/lib/api";
 import { WorkerSummary, ApprovalStatus } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
-import { FixedSizeList as List } from 'react-window';
 import { Badge } from "@/components/ui/badge";
 
 const MonthlySummary = () => {
@@ -159,28 +158,28 @@ const MonthlySummary = () => {
   };
 
   // Handle entering edit mode for a worker
-  const handleEditWorker = (workerId: string, summary: any) => {
+  const handleEditWorker = (workerId: string, currentSummary: any) => {
     // Make sure it can only be edited if it's at the right stage for the user's role
-    if (userRole === "Standard" && summary.approval_statuses?.includes("Pending")) {
+    if (userRole === "Standard" && currentSummary.approval_statuses?.includes("Pending")) {
       setEditingWorkerId(workerId);
       setEditForm({
-        category_a_amount: summary.category_a_amount || summary.category_a_hours * 2,
-        category_c_amount: summary.category_c_amount || summary.category_c_hours * 3,
-        transportation_cost: summary.transportation_cost || 0
+        category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
+        category_c_amount: currentSummary.category_c_amount || currentSummary.category_c_hours * 3,
+        transportation_cost: currentSummary.transportation_cost || 0
       });
-    } else if (userRole === "Supervisor" && summary.approval_statuses?.includes("Standard")) {
+    } else if (userRole === "Supervisor" && currentSummary.approval_statuses?.includes("Standard")) {
       setEditingWorkerId(workerId);
       setEditForm({
-        category_a_amount: summary.category_a_amount || summary.category_a_hours * 2,
-        category_c_amount: summary.category_c_amount || summary.category_c_hours * 3,
-        transportation_cost: summary.transportation_cost || 0
+        category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
+        category_c_amount: currentSummary.category_c_amount || currentSummary.category_c_hours * 3,
+        transportation_cost: currentSummary.transportation_cost || 0
       });
-    } else if (userRole === "Accountant" && summary.approval_statuses?.includes("Supervisor")) {
+    } else if (userRole === "Accountant" && currentSummary.approval_statuses?.includes("Supervisor")) {
       setEditingWorkerId(workerId);
       setEditForm({
-        category_a_amount: summary.category_a_amount || summary.category_a_hours * 2,
-        category_c_amount: summary.category_c_amount || summary.category_c_hours * 3,
-        transportation_cost: summary.transportation_cost || 0
+        category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
+        category_c_amount: currentSummary.category_c_amount || currentSummary.category_c_hours * 3,
+        transportation_cost: currentSummary.transportation_cost || 0
       });
     } else {
       // Wrong status for this user role
@@ -203,7 +202,7 @@ const MonthlySummary = () => {
   };
 
   // Handle saving edited amounts
-  const handleSaveAmounts = async (workerId: string) => {
+  const handleSaveAmounts = async () => {
     try {
       // In a real implementation, this would need to update all entries for this worker
       // For this example, we'll just show a toast
@@ -291,118 +290,6 @@ const MonthlySummary = () => {
     
     return textFiltered;
   }, [summary, searchQuery, approvalFilter]);
-
-  // Row renderer for virtualized list
-  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
-    if (index >= finalFilteredSummaries.length) return null;
-    
-    const summary = finalFilteredSummaries[index];
-    
-    return (
-      <div style={style} className="flex divide-x divide-gray-200">
-        <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 w-1/7">
-          <div className="truncate max-w-[150px]" title={summary.name}>
-            {summary.name}
-          </div>
-        </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
-          {summary.staff_id}
-        </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
-          {summary.grade}
-        </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
-          <div className="text-blue-600 font-bold text-base">₵{summary.category_a_amount?.toFixed(2) ?? (summary.category_a_hours * 2).toFixed(2)}</div>
-          <div className="text-gray-500 text-xs mt-1">{summary.category_a_hours.toFixed(2)} hrs</div>
-        </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
-          <div className="text-blue-600 font-bold text-base">₵{summary.category_c_amount?.toFixed(2) ?? (summary.category_c_hours * 3).toFixed(2)}</div>
-          <div className="text-gray-500 text-xs mt-1">{summary.category_c_hours.toFixed(2)} hrs</div>
-        </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
-          <div className="text-blue-600 font-bold text-base">₵{summary.transportation_cost?.toFixed(2) ?? "0.00"}</div>
-          <div className="text-gray-500 text-xs mt-1">{summary.transportation_days || 0} days</div>
-        </div>
-        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7">
-          {getApprovalBadge(summary.approval_statuses || ["Pending"])}
-        </div>
-        {(userRole === "Standard" || userRole === "Supervisor" || userRole === "Accountant" || userRole === "Director") && (
-          <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/7 flex gap-2">
-            {editingWorkerId === summary.worker_id ? (
-              <>
-                <Button variant="approve" size="sm" onClick={() => handleSaveAmounts(summary.worker_id)}>
-                  Save
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                {userRole === "Standard" && (
-                  <Button
-                    variant="standard"
-                    size="sm"
-                    onClick={() => handleEditWorker(summary.worker_id, summary)}
-                    disabled={
-                      editingWorkerId !== null || 
-                      !summary.approval_statuses?.includes("Pending") ||
-                      summary.approval_statuses?.includes("Standard") ||
-                      summary.approval_statuses?.includes("Approved")
-                    }
-                  >
-                    <Edit className="h-4 w-4 mr-1" /> Initial Review
-                  </Button>
-                )}
-                
-                {userRole === "Supervisor" && (
-                  <Button
-                    variant="supervisor"
-                    size="sm"
-                    onClick={() => handleEditWorker(summary.worker_id, summary)}
-                    disabled={
-                      editingWorkerId !== null || 
-                      !summary.approval_statuses?.includes("Standard") ||
-                      summary.approval_statuses?.includes("Supervisor") ||
-                      summary.approval_statuses?.includes("Approved")
-                    }
-                  >
-                    <Edit className="h-4 w-4 mr-1" /> Supervisor Review
-                  </Button>
-                )}
-                
-                {userRole === "Accountant" && (
-                  <Button
-                    variant="accountant"
-                    size="sm"
-                    onClick={() => handleEditWorker(summary.worker_id, summary)}
-                    disabled={
-                      editingWorkerId !== null || 
-                      !summary.approval_statuses?.includes("Supervisor") ||
-                      summary.approval_statuses?.includes("Accountant") ||
-                      summary.approval_statuses?.includes("Approved")
-                    }
-                  >
-                    <Edit className="h-4 w-4 mr-1" /> Edit Amounts
-                  </Button>
-                )}
-                
-                {userRole === "Director" && summary.approval_statuses?.includes("Accountant") && (
-                  <Button
-                    variant="director"
-                    size="sm"
-                    onClick={() => navigate(`/worker-details?id=${summary.worker_id}`)}
-                  >
-                    <Users className="h-4 w-4 mr-1" /> View Details
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }, [finalFilteredSummaries, editingWorkerId, userRole, navigate]);
 
   const exportData = (type: 'overtime' | 'transport') => {
     try {
@@ -694,7 +581,7 @@ const MonthlySummary = () => {
                           <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1 flex gap-2">
                             {editingWorkerId === summary.worker_id ? (
                               <>
-                                <Button variant="approve" size="sm" onClick={() => handleSaveAmounts(summary.worker_id)}>
+                                <Button variant="approve" size="sm" onClick={handleSaveAmounts}>
                                   Save
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={handleCancelEdit}>

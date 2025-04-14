@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const PerformanceMonitor: React.FC = () => {
   const [stats, setStats] = useState(getPerformanceStats());
   const [isEnabled, setIsEnabled] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(5000); // 5 seconds
+  const [_setRefreshInterval] = useState(30000);  // 30 seconds default
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Refresh stats periodically
@@ -24,10 +24,10 @@ const PerformanceMonitor: React.FC = () => {
     
     const intervalId = setInterval(() => {
       setStats(getPerformanceStats());
-    }, refreshInterval);
+    }, _setRefreshInterval);
     
     return () => clearInterval(intervalId);
-  }, [isEnabled, refreshInterval]);
+  }, [isEnabled, _setRefreshInterval]);
   
   // Toggle monitoring
   const handleToggleMonitoring = () => {

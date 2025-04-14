@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { LogOut, Download, Edit, ChevronLeft, ChevronRight, Home, Calendar, Shield, BarChart, Check, Clock, CheckCircle2, AlertCircle, Users, ThumbsUp, Loader2 } from "lucide-react";
+import { LogOut, Download, Edit, Home, Shield, BarChart, Clock, CheckCircle2, AlertCircle, Users, ThumbsUp, Loader2 } from "lucide-react";
 import { overtime } from "@/lib/api";
 import { WorkerSummary, ApprovalStatus } from "@/types"; // Ensure types are correct
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
-import { FixedSizeList as List } from 'react-window'; // Keep if needed for performance
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 

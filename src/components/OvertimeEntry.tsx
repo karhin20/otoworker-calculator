@@ -39,7 +39,10 @@ export const OvertimeEntry = ({ workers, onSubmit, isSubmitting: externalIsSubmi
   const [localIsSubmitting, setLocalIsSubmitting] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [holidays, setHolidays] = useState<{date: string; name: string}[]>([]);
-  const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
+  const [_isLoadingHolidays, setIsLoadingHolidays] = useState(false);
+  const [_returnTime, ] = useState<Date | null>(null);
+  const [_showHoursPicker, ] = useState(false);
+  const [_selectedRegion, ] = useState<string>('');
 
   // Use external isSubmitting state if provided, otherwise use local state
   const isSubmitting = externalIsSubmitting !== undefined ? externalIsSubmitting : localIsSubmitting;

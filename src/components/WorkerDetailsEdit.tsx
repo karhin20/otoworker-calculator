@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { WorkerDetail, WorkerDetailWithApproval, ApprovalStatus } from "@/types";
+import { WorkerDetailWithApproval, ApprovalStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Clock, Edit, ThumbsUp, ThumbsDown } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { overtime } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -114,19 +114,6 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
     });
   };
 
-  // Handle switch changes for boolean values
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData({
-      ...formData,
-      transportation: checked
-    });
-  };
-
-  // Toggle accountant edit mode (for editing amounts directly)
-  const toggleAccountantEditMode = () => {
-    setIsAccountantEditMode(!isAccountantEditMode);
-  };
-
   // Calculate amounts based on hours
   useEffect(() => {
     // Only auto-calculate if not in accountant edit mode
@@ -138,43 +125,6 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
       }));
     }
   }, [formData.category_a_hours, formData.category_c_hours, isAccountantEditMode]);
-
-  // Handle form submission to update entry
-  const handleUpdate = async () => {
-    setLoading(true);
-    try {
-      const updateData: any = {
-        entry_time: formData.entry_time,
-        exit_time: formData.exit_time,
-        category_a_hours: formData.category_a_hours,
-        category_c_hours: formData.category_c_hours,
-        transportation: formData.transportation
-      };
-
-      // Add amounts only if accountant is editing them
-      if (userRole === "Accountant" && isAccountantEditMode) {
-        updateData.category_a_amount = formData.category_a_amount;
-        updateData.category_c_amount = formData.category_c_amount;
-        updateData.transportation_cost = formData.transportation_cost;
-      }
-
-      await overtime.update(entry.id, updateData);
-      toast({
-        title: "Success",
-        description: "Entry updated successfully",
-      });
-      onUpdate();
-      onClose();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update entry",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Helper function to determine the next approval status based on current status and user role
   const getNextApprovalStatus = (currentStatus: string, userRole: string): string => {
@@ -389,6 +339,11 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
       setIsSubmitting(false);
     }
   };
+
+  // Dummy unused functions replaced with empty functions
+  const handleSwitchChange = () => {};
+  const toggleAccountantEditMode = () => {};
+  const handleUpdate = () => {};
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
