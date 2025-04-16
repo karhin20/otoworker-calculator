@@ -148,15 +148,15 @@ const SupervisorDashboard = () => {
         summaryData.forEach((row) => {
           const catAAmount = row.category_a_amount ?? (row.category_a_hours * 2);
           const catCAmount = row.category_c_amount ?? (row.category_c_hours * 3);
-          csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},₵${catAAmount.toFixed(2)},${row.category_c_hours.toFixed(2)},₵${catCAmount.toFixed(2)}\n`;
+          csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},${catAAmount.toFixed(2)},${row.category_c_hours.toFixed(2)},${catCAmount.toFixed(2)}\n`;
         });
-        csvContent += `\nTotals,,,${totals.categoryA.toFixed(2)},₵${totals.categoryAAmount.toFixed(2)},${totals.categoryC.toFixed(2)},₵${totals.categoryCAmount.toFixed(2)}\n`;
+        csvContent += `\nTotals,,,${totals.categoryA.toFixed(2)},${totals.categoryAAmount.toFixed(2)},${totals.categoryC.toFixed(2)},${totals.categoryCAmount.toFixed(2)}\n`;
       } else {
         csvContent = 'Name,Staff ID,Grade,Total Days,Transport Cost\n';
         summaryData.forEach((row) => {
-          csvContent += `${row.name},${row.staff_id},${row.grade},${row.transportation_days},₵${row.transportation_cost.toFixed(2)}\n`;
+          csvContent += `${row.name},${row.staff_id},${row.grade},${row.transportation_days},${row.transportation_cost.toFixed(2)}\n`;
         });
-        csvContent += `\nTotals,,,,₵${totals.transportCost.toFixed(2)}\n`;
+        csvContent += `\nTotals,,,,${totals.transportCost.toFixed(2)}\n`;
       }
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

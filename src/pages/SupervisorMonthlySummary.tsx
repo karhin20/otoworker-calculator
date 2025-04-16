@@ -348,28 +348,49 @@ const SupervisorMonthlySummary = () => {
   // Export data function remains largely the same, check if WorkerSummary includes necessary fields
   const exportData = (type: 'overtime' | 'transport') => {
     try {
-      const currentTotals = calculateTotals(); // Use the calculated totals
       let csvContent = '';
-      const monthYear = `${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}`;
+      const monthYear = `${months[selectedMonth]} ${selectedYear}`;
       const fileName = `${type}_summary_${monthYear}.csv`;
 
+      // Filter out the data based on the approval status
+      const filteredSummaries = summary.filter(row => {
+        if (approvalFilter === "all") return true;
+        return row.approval_status === approvalFilter;
+      });
+
+      // Calculate the totals
+      const totals = filteredSummaries.reduce((acc, row) => {
+        return {
+          categoryA: acc.categoryA + (row.category_a_hours || 0),
+          categoryAAmount: acc.categoryAAmount + (row.category_a_amount || (row.category_a_hours || 0) * 2),
+          categoryC: acc.categoryC + (row.category_c_hours || 0),
+          categoryCAmount: acc.categoryCAmount + (row.category_c_amount || (row.category_c_hours || 0) * 3),
+          transportCost: acc.transportCost + (row.transportation_cost || 0),
+          transportDays: acc.transportDays + (row.transportation_days || 0)
+        };
+      }, {
+        categoryA: 0,
+        categoryAAmount: 0,
+        categoryC: 0,
+        categoryCAmount: 0,
+        transportCost: 0,
+        transportDays: 0
+      });
+
       if (type === 'overtime') {
-        csvContent = 'Name,Staff ID,Grade,Category A Hours,Category C Hours,Category A Amount,Category C Amount\n'; // Added Amount columns
-        finalFilteredSummaries.forEach((row) => {
-            const catAAmount = (row as any).category_a_amount !== undefined ? (row as any).category_a_amount : (row.category_a_hours * 2); // Use stored or calculated
-            const catCAmount = (row as any).category_c_amount !== undefined ? (row as any).category_c_amount : (row.category_c_hours * 3); // Use stored or calculated
-            csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},${row.category_c_hours.toFixed(2)},${catAAmount.toFixed(2)},${catCAmount.toFixed(2)}\n`;
+        csvContent = 'Name,Staff ID,Grade,Category A Hours,Category A Amount,Category C Hours,Category C Amount\n';
+        filteredSummaries.forEach((row) => {
+          const catAAmount = row.category_a_amount !== undefined ? row.category_a_amount : (row.category_a_hours * 2);
+          const catCAmount = row.category_c_amount !== undefined ? row.category_c_amount : (row.category_c_hours * 3);
+          csvContent += `${row.name},${row.staff_id},${row.grade},${row.category_a_hours.toFixed(2)},${catAAmount.toFixed(2)},${row.category_c_hours.toFixed(2)},${catCAmount.toFixed(2)}\n`;
         });
-        // Calculate total amounts for export
-        const totalCatAAmount = finalFilteredSummaries.reduce((sum, row) => sum + ((row as any).category_a_amount !== undefined ? (row as any).category_a_amount : (row.category_a_hours * 2)), 0);
-        const totalCatCAmount = finalFilteredSummaries.reduce((sum, row) => sum + ((row as any).category_c_amount !== undefined ? (row as any).category_c_amount : (row.category_c_hours * 3)), 0);
-        csvContent += `\nTotals,,,${currentTotals.totalCategoryA.toFixed(2)},${currentTotals.totalCategoryC.toFixed(2)},${totalCatAAmount.toFixed(2)},${totalCatCAmount.toFixed(2)}\n`;
+        csvContent += `\nTotals,,,${totals.categoryA.toFixed(2)},${totals.categoryAAmount.toFixed(2)},${totals.categoryC.toFixed(2)},${totals.categoryCAmount.toFixed(2)}\n`;
       } else {
         csvContent = 'Name,Staff ID,Grade,Total Days,Transport Cost\n';
-        finalFilteredSummaries.forEach((row) => {
+        filteredSummaries.forEach((row) => {
           csvContent += `${row.name},${row.staff_id},${row.grade},${row.transportation_days},${row.transportation_cost.toFixed(2)}\n`;
         });
-        csvContent += `\nTotals,,,,${currentTotals.totalTransport.toFixed(2)}\n`;
+        csvContent += `\nTotals,,,,${totals.transportCost.toFixed(2)}\n`;
       }
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -382,19 +403,18 @@ const SupervisorMonthlySummary = () => {
       link.click();
       document.body.removeChild(link);
 
-      // Show success toast
       toast({
         title: "Export Successful",
         description: `${type === 'overtime' ? 'Overtime' : 'Transport'} data has been exported to ${fileName}`,
         variant: "default",
       });
     } catch (error) {
-      console.error("Export error:", error);
       toast({
         title: "Export Failed",
         description: "There was an error exporting the data. Please try again.",
         variant: "destructive",
       });
+      console.error("Export error:", error);
     }
   };
 

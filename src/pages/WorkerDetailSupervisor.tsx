@@ -217,7 +217,7 @@ const WorkerDetailSupervisor = () => {
         }
       });
 
-      // Add totals row
+      // Add totals row - no cedi symbol
       csvContent += `\nTotal,,,,${totals.totalTransport.toFixed(2)}`;
       
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -258,7 +258,7 @@ const WorkerDetailSupervisor = () => {
         csvContent += `${detail.remarks || ''}\n`;
       });
 
-      // Add totals row - align Total Hours under HRS column
+      // Add totals row - no cedi symbol
       const totalHrs = totals.totalCategoryA + totals.totalCategoryC;
       csvContent += `\nTotal,,,,,,${totalHrs.toFixed(2)},`;
       
