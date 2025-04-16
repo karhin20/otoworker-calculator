@@ -551,8 +551,8 @@ const SupervisorMonthlySummary = () => {
             </div>
 
 
-            {/* Director Approve All Button */}
-            {userRole === "Director" && (
+            {/* Director/RCM Approve All Button */}
+            {(userRole === "Director" || userRole === "RCM") && (
                 <div className="flex justify-end mb-4">
                     <Button
                         variant="director"
@@ -671,8 +671,8 @@ const SupervisorMonthlySummary = () => {
                              </>
                            ) : (
                              <>
-                                {/* Edit button for both Supervisor and Accountant */}
-                                {userRole === "Supervisor" && (
+                                {/* Edit button for Supervisor/RDM and Accountant */}
+                                {(userRole === "Supervisor" || userRole === "RDM" || userRole === "Accountant") && (
                                    <Button
                                      variant="outline"
                                      size="sm"
@@ -685,8 +685,8 @@ const SupervisorMonthlySummary = () => {
                                    </Button>
                                 )}
                                 
-                                {/* Approve button for Supervisor */}
-                                {userRole === "Supervisor" && (
+                                {/* Approve button for Supervisor/RDM */}
+                                {(userRole === "Supervisor" || userRole === "RDM") && (
                                    <Button
                                      variant="rdm"
                                      size="sm"
@@ -701,8 +701,8 @@ const SupervisorMonthlySummary = () => {
                                    </Button>
                                 )}
                                 
-                                {/* View Details button for Director at Supervisor stage */}
-                                {userRole === "Director" && (
+                                {/* View Details button for Director/RCM at Supervisor stage */}
+                                {(userRole === "Director" || userRole === "RCM") && (
                                     <Button
                                         variant="director"
                                         size="sm"
@@ -775,9 +775,11 @@ const SupervisorMonthlySummary = () => {
           <DialogHeader>
             <DialogTitle>Confirm Approval</DialogTitle>
             <DialogDescription>
-              {userRole === "Supervisor" ? 
-                `Are you sure you want to approve this worker's entries? This will change eligible entries from ${getDisplayApprovalStatus("Standard")} to ${getDisplayApprovalStatus("Supervisor")}.` : 
-                `Are you sure you want to approve all ${getDisplayApprovalStatus("Supervisor")}-reviewed entries?`
+              {(userRole === "Supervisor" || userRole === "RDM") ? 
+                `Are you sure you want to approve this worker's entries? This will change only entries with ${getDisplayApprovalStatus("Standard")} status to ${getDisplayApprovalStatus("Supervisor")} status. Entries not yet approved by District Head will not be affected.` : 
+                (userRole === "Director" || userRole === "RCM") ?
+                `Are you sure you want to approve this worker's entries? This will change only entries with ${getDisplayApprovalStatus("Supervisor")} status to Approved status. Entries not yet approved by RDM will not be affected.` :
+                `Are you sure you want to approve these entries?`
               }
             </DialogDescription>
           </DialogHeader>

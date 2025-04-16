@@ -781,8 +781,23 @@ const WorkerDetailSupervisor = () => {
             <DialogHeader>
               <DialogTitle>Confirm Approval</DialogTitle>
               <DialogDescription>
-                Are you sure you want to approve all entries for this worker's monthly summary?
-                This will approve all entries with '{getDisplayApprovalStatus("Standard")}' status to '{getDisplayApprovalStatus("Supervisor")}' status.
+                {(userRole === "Supervisor" || userRole === "RDM") ? (
+                  <>
+                    Are you sure you want to approve all entries for this worker's monthly summary?
+                    This will approve only entries with '{getDisplayApprovalStatus("Standard")}' status to '{getDisplayApprovalStatus("Supervisor")}' status.
+                    Entries not yet approved by District Head will not be affected.
+                  </>
+                ) : (userRole === "Director" || userRole === "RCM") ? (
+                  <>
+                    Are you sure you want to approve all entries for this worker's monthly summary?
+                    This will approve only entries with '{getDisplayApprovalStatus("Supervisor")}' status to 'Approved' status.
+                    Entries not yet approved by RDM will not be affected.
+                  </>
+                ) : (
+                  <>
+                    Are you sure you want to approve all entries for this worker's monthly summary?
+                  </>
+                )}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
