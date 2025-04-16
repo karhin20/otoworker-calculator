@@ -49,7 +49,7 @@ const WorkerDetailSupervisor = () => {
       setUser(userData);
       setUserRole(userData.role || "Standard");
       
-      // Redirect if not Supervisor or Director
+      // Redirect if not RDM/Supervisor or RCM/Director
       if (!userData.role || userData.role === "Standard") {
         navigate("/worker-details"); // Redirect standard users to regular details
       }
@@ -646,7 +646,7 @@ const WorkerDetailSupervisor = () => {
                               <div className="text-blue-600 font-bold text-base">₵{totals.totalTransport.toFixed(2)}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              {(userRole === "Supervisor" || userRole === "Accountant") && (
+                              {(userRole === "Supervisor" || userRole === "RDM" || userRole === "Accountant") && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -664,9 +664,9 @@ const WorkerDetailSupervisor = () => {
                   </table>
                 </div>
                 <div className="mt-4 flex justify-between">
-                  {userRole === "Supervisor" && (
+                  {(userRole === "Supervisor" || userRole === "RDM") && (
                     <Button
-                      variant="supervisor"
+                      variant="rdm"
                       size="sm"
                       onClick={handleApproveAll}
                       disabled={!selectedWorker || details.length === 0}
@@ -782,7 +782,7 @@ const WorkerDetailSupervisor = () => {
               <DialogTitle>Confirm Approval</DialogTitle>
               <DialogDescription>
                 Are you sure you want to approve all entries for this worker's monthly summary?
-                This will approve all entries with 'Standard' status to 'Supervisor' status.
+                This will approve all entries with '{getDisplayApprovalStatus("Standard")}' status to '{getDisplayApprovalStatus("Supervisor")}' status.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -790,7 +790,7 @@ const WorkerDetailSupervisor = () => {
               <Button 
                 onClick={confirmApproveAll}
                 disabled={isApprovingAll}
-                variant="supervisor"
+                variant="rdm"
               >
                 {isApprovingAll ? (
                   <>

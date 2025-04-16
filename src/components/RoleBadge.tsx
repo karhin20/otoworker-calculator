@@ -27,13 +27,11 @@ const RoleBadge: React.FC<RoleBadgeProps> = ({ role, showFullName = false }) => 
       textColor = "text-blue-800";
       break;
     case "Accountant":
-      bgColor = "bg-purple-100";
-      textColor = "text-purple-800";
+      bgColor = "bg-purple-500 text-white";
       break;
     case "Director":
     case "RCM":
-      bgColor = "bg-amber-100";
-      textColor = "text-amber-800";
+      bgColor = "bg-amber-500 text-white";
       break;
     default:
       // Keep the default blue

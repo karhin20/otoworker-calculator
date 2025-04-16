@@ -163,7 +163,7 @@ const MonthlySummary = () => {
         category_c_amount: currentSummary.category_c_amount || currentSummary.category_c_hours * 3,
         transportation_cost: currentSummary.transportation_cost || 0
       });
-    } else if (userRole === "Supervisor" && currentSummary.approval_statuses?.includes("Standard")) {
+    } else if ((userRole === "Supervisor" || userRole === "RDM") && currentSummary.approval_statuses?.includes("Standard")) {
       setEditingWorkerId(workerId);
       setEditForm({
         category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
@@ -561,7 +561,7 @@ const MonthlySummary = () => {
                           {getApprovalBadge(summary.approval_statuses || ["Pending"])}
                         </div>
                         
-                        {(userRole === "Standard" || userRole === "Supervisor" || userRole === "Accountant" || userRole === "Director") && (
+                        {(userRole === "Standard" || userRole === "District_Head" || userRole === "Supervisor" || userRole === "RDM" || userRole === "Accountant" || userRole === "Director" || userRole === "RCM") && (
                           <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1 flex gap-2">
                             {editingWorkerId === summary.worker_id ? (
                               <>

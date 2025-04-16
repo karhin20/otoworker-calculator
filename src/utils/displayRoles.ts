@@ -14,7 +14,6 @@ export const getDisplayRole = (role: string): string => {
     case 'RDM':
       return 'RDM';
     case 'Director':
-      return 'RCM';
     case 'RCM':
       return 'RCM';
     case 'Accountant':
@@ -38,13 +37,12 @@ export const getFullDisplayRole = (role: string): string => {
     case 'District_Head':
       return 'District Head';
     case 'Supervisor':
-      return 'Regional District Manager';
+      return 'RDM';
     case 'RDM':
-      return 'Regional District Manager';
+      return 'RDM';
     case 'Director':
-      return 'Regional Credit Manager';
     case 'RCM':
-      return 'Regional Credit Manager';
+      return 'RCM';
     case 'Accountant':
       return 'Regional Accountant';
     case 'Developer':
@@ -70,9 +68,10 @@ export const getDisplayApprovalStatus = (status: string): string => {
     case 'RDM':
       return 'RDM';
     case 'Director':
-      return 'RCM';
     case 'RCM':
       return 'RCM';
+    case 'Pending':
+      return 'Pending RCM Approval';
     default:
       return status;
   }

@@ -221,9 +221,9 @@ const SupervisorMonthlySummary = () => {
 
     // Strict hierarchy-based permissions
     let canEditRole = false;
-    if (userRole === "Director" && currentStatuses.includes("Supervisor")) {
+    if ((userRole === "Director" || userRole === "RCM") && currentStatuses.includes("Supervisor")) {
         canEditRole = true;
-    } else if (userRole === "Supervisor" && currentStatuses.includes("Standard")) {
+    } else if ((userRole === "Supervisor" || userRole === "RDM") && currentStatuses.includes("Standard")) {
         canEditRole = true;
     } else if (userRole === "Standard" && currentStatuses.includes("Pending")) {
         canEditRole = true;
@@ -599,7 +599,7 @@ const SupervisorMonthlySummary = () => {
                         <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">{summaryItem.grade}</div>
 
                          {/* Amounts - Editable by Supervisor and Accountant */}
-                         {editingWorkerId === summaryItem.worker_id && (userRole === "Accountant" || userRole === "Supervisor") ? (
+                         {editingWorkerId === summaryItem.worker_id && (userRole === "Accountant" || userRole === "Supervisor" || userRole === "RDM") ? (
                            <>
                              <div className="px-2 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1">
                                <div className="mb-1 text-xs font-semibold text-gray-700">Hours: {summaryItem.category_a_hours.toFixed(2)}</div>
@@ -688,7 +688,7 @@ const SupervisorMonthlySummary = () => {
                                 {/* Approve button for Supervisor */}
                                 {userRole === "Supervisor" && (
                                    <Button
-                                     variant="supervisor"
+                                     variant="rdm"
                                      size="sm"
                                      onClick={() => handleApproveWorker(summaryItem.worker_id)}
                                      disabled={loading || editingWorkerId !== null || 

@@ -356,7 +356,7 @@ const SupervisorDashboard = () => {
               {user?.role === "Accountant" && (
                 <li>Edit amounts for worker overtime and transportation entries</li>
               )}
-              {user?.role === "Director" && (
+              {(user?.role === "Director" || user?.role === "RCM") && (
                 <li>Final approval of worker entries after accountant review</li>
               )}
             </ul>

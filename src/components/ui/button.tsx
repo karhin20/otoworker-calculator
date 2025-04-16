@@ -26,12 +26,12 @@ const buttonVariants = cva(
           "bg-rose-600 text-white hover:bg-rose-700 shadow-md font-semibold",
         standard:
           "bg-green-500 text-white hover:bg-green-600 shadow-md font-semibold",
-        supervisor: 
-          "bg-blue-500 text-white hover:bg-blue-600 shadow-md font-semibold",
+        supervisor: "bg-blue-600 text-white hover:bg-blue-700",
+        rdm: "bg-blue-600 text-white hover:bg-blue-700",
         accountant: 
           "bg-purple-500 text-white hover:bg-purple-600 shadow-md font-semibold",
-        director: 
-          "bg-amber-500 text-white hover:bg-amber-600 shadow-md font-semibold",
+        director: "bg-amber-600 text-white hover:bg-amber-700",
+        rcm: "bg-amber-600 text-white hover:bg-amber-700",
       },
       size: {
         default: "h-10 px-4 py-2",

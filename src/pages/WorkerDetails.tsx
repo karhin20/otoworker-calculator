@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,9 +19,13 @@ import RoleBadge from "@/components/RoleBadge";
 
 const WorkerDetails = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const workerIdFromQuery = queryParams.get('id');
+  
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedWorker, setSelectedWorker] = useState("");
+  const [selectedWorker, setSelectedWorker] = useState(workerIdFromQuery || "");
   const [details, setDetails] = useState<WorkerDetail[]>([]);
   const [workersList, setWorkersList] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,13 +63,21 @@ const WorkerDetails = () => {
         const data = await workers.getAll();
         // Use type assertion as a workaround for potential type definition mismatch
         setWorkersList(data as any[]); 
+        
+        // If we have a workerId from query and it's valid, select it
+        if (workerIdFromQuery) {
+          const isValidWorker = data.some(w => w.id === workerIdFromQuery);
+          if (isValidWorker) {
+            setSelectedWorker(workerIdFromQuery);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch workers:", error);
       }
     };
 
     fetchWorkers();
-  }, []);
+  }, [workerIdFromQuery]);
 
   // Define fetchDetails function for reuse outside the useEffect
   const fetchDetails = async () => {
@@ -311,20 +323,20 @@ const WorkerDetails = () => {
   // Can user edit this entry?
   const canEdit = (status: ApprovalStatus): boolean => {
     // Follow hierarchical approval flow for editing
-    if (userRole === "Standard" && status === "Pending") {
-      return true; // Standard admin can only edit pending entries
+    if ((userRole === "Standard" || userRole === "District_Head") && status === "Pending") {
+      return true; // Standard/District_Head admin can only edit pending entries
     }
     
-    if (userRole === "Supervisor" && status === "Standard") {
-      return true; // Supervisors can only edit Standard-approved entries
+    if ((userRole === "Supervisor" || userRole === "RDM") && status === "Standard") {
+      return true; // Supervisors/RDM can only edit Standard-approved entries
     }
     
     if (userRole === "Accountant" && status === "Supervisor") {
       return true; // Accountants can only edit Supervisor-approved entries
     }
     
-    if (userRole === "Director") {
-      return false; // Directors can only approve/reject
+    if (userRole === "Director" || userRole === "RCM") {
+      return false; // Directors/RCM can only approve/reject
     }
     
     return false; // No other combinations are allowed
@@ -456,11 +468,11 @@ const WorkerDetails = () => {
       let nextStatus: string;
       
       // Determine next status based on user role and current status
-      if (userRole === "Director" && currentStatus === "Supervisor") {
+      if ((userRole === "Director" || userRole === "RCM") && currentStatus === "Supervisor") {
         nextStatus = "Approved";
-      } else if (userRole === "Supervisor" && currentStatus === "Standard") {
+      } else if ((userRole === "Supervisor" || userRole === "RDM") && currentStatus === "Standard") {
         nextStatus = "Supervisor";
-      } else if (userRole === "Standard" && currentStatus === "Pending") {
+      } else if ((userRole === "Standard" || userRole === "District_Head") && currentStatus === "Pending") {
         nextStatus = "Standard";
       } else {
         throw new Error("Invalid approval path");
@@ -496,16 +508,16 @@ const WorkerDetails = () => {
   // Can user approve this entry?
   const canApprove = (status: ApprovalStatus): boolean => {
     // Follow hierarchical approval flow
-    if (userRole === "Standard" && status === "Pending") {
-      return true; // Standard admin can approve pending entries to start the flow
+    if ((userRole === "Standard" || userRole === "District_Head") && status === "Pending") {
+      return true; // Standard/District_Head admin can approve pending entries to start the flow
     }
     
-    if (userRole === "Supervisor" && status === "Standard") {
-      return true; // Supervisors can only approve entries already approved by Standard admin
+    if ((userRole === "Supervisor" || userRole === "RDM") && status === "Standard") {
+      return true; // Supervisors/RDM can only approve entries already approved by Standard admin
     }
     
-    if (userRole === "Director" && status === "Supervisor") {
-      return true; // Directors can only approve entries already approved by Supervisors
+    if ((userRole === "Director" || userRole === "RCM") && status === "Supervisor") {
+      return true; // Directors/RCM can only approve entries already approved by Supervisors
     }
     
     return false; // No other combinations are allowed
@@ -725,9 +737,9 @@ const WorkerDetails = () => {
                                   onClick={() => handleApproveEntry(detail.id)}
                                   size="sm"
                                   className={
-                                    userRole === "Standard" ? "text-green-600 hover:bg-green-50 hover:text-green-700" :
-                                    userRole === "Supervisor" ? "text-blue-600 hover:bg-blue-50 hover:text-blue-700" :
-                                    "text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+                                    userRole === "Supervisor" || userRole === "RDM" ? "text-blue-600 hover:bg-blue-50 hover:text-blue-700" :
+                                    userRole === "Director" || userRole === "RCM" ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700" :
+                                    "text-green-600 hover:bg-green-50 hover:text-green-700"
                                   }
                                 >
                                   <ThumbsUp className="h-4 w-4" />
@@ -964,9 +976,9 @@ const WorkerDetails = () => {
               onClick={confirmApproval} 
               disabled={isConfirmingApproval}
               className={
-                userRole === "Standard" ? "bg-green-600 hover:bg-green-700" :
-                userRole === "Supervisor" ? "bg-blue-600 hover:bg-blue-700" :
-                "bg-purple-600 hover:bg-purple-700"
+                userRole === "Supervisor" || userRole === "RDM" ? "bg-blue-600 hover:bg-blue-700" :
+                userRole === "Director" || userRole === "RCM" ? "bg-amber-600 hover:bg-amber-700" :
+                "bg-green-600 hover:bg-green-700"
               }
             >
               {isConfirmingApproval ? (
@@ -977,7 +989,7 @@ const WorkerDetails = () => {
               ) : (
                 <>
                   <ThumbsUp className="mr-2 h-4 w-4" />
-                  {userRole === "Director" ? "Final Approval" : `Approve as ${getDisplayRole(userRole)}`}
+                  {(userRole === "Director" || userRole === "RCM") ? "Final Approval" : `Approve as ${getDisplayRole(userRole)}`}
                 </>
               )}
             </Button>

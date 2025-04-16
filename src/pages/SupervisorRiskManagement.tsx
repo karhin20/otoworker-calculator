@@ -530,7 +530,7 @@ const SupervisorRiskManagement = () => {
           <Card className="p-6 bg-blue-50 border border-blue-100">
             <h3 className="text-xl font-semibold text-blue-800 mb-4">Risk Management for Admin Roles</h3>
             <p className="text-blue-700 mb-4">
-              As an admin user (Supervisor, Accountant, Director), you can review and manage risk entries submitted by workers.
+              As an admin user (RDM, Accountant, RCM), you can review and manage risk entries submitted by workers.
               You can approve or reject entries based on policy and view detailed information about each entry.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
