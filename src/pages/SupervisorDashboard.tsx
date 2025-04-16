@@ -11,7 +11,6 @@ import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Input } from "@/components/ui/input";
 import { getAndClearNotification } from "@/utils/notifications";
-import { getDisplayRole } from "@/utils/displayRoles";
 import RoleBadge from "@/components/RoleBadge";
 
 const ResponsiveTable = ({ children }: { children: React.ReactNode }) => {

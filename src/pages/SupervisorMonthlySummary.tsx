@@ -13,7 +13,6 @@ import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { getDisplayRole } from "@/utils/displayRoles";
 import RoleBadge from "@/components/RoleBadge";
 
 // Rename component

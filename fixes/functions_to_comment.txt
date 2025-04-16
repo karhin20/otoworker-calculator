@@ -1,0 +1,33 @@
+// These two functions need to be commented out in WorkerDetailsEdit.tsx
+
+// Helper function to determine the next approval status based on current status and user role
+const getNextApprovalStatus = (currentStatus: string, userRole: string): string => {
+  if (userRole === "Director") {
+    return "Approved";
+  } else if (userRole === "Supervisor" && currentStatus === "Pending") {
+    return "Supervisor";
+  } else {
+    // Default fallback - should not reach here in normal flow
+    return currentStatus;
+  }
+};
+
+// Check if the current user can approve this entry
+const canApprove = (): boolean => {
+  if (!entry) return false;
+  
+  // Follow hierarchical approval flow
+  if (userRole === "Standard" && entry.approval_status === "Pending") {
+    return true; // Standard admin can approve pending entries to start the flow
+  }
+  
+  if (userRole === "Supervisor" && entry.approval_status === "Standard") {
+    return true; // Supervisors can only approve entries already approved by Standard admin
+  }
+  
+  if (userRole === "Director" && entry.approval_status === "Supervisor") {
+    return true; // Directors can only approve entries already approved by Supervisors
+  }
+  
+  return false; // No other combinations are allowed
+}; 

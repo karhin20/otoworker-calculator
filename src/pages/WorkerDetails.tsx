@@ -14,7 +14,7 @@ import WorkerDetailsEdit from "@/components/WorkerDetailsEdit";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { getDisplayRole, getFullDisplayRole, getDisplayApprovalStatus } from "@/utils/displayRoles";
+import { getDisplayRole, getDisplayApprovalStatus } from "@/utils/displayRoles";
 import RoleBadge from "@/components/RoleBadge";
 
 const WorkerDetails = () => {

@@ -12,7 +12,6 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
 import { Badge } from "@/components/ui/badge";
-import { getDisplayRole } from "@/utils/displayRoles";
 import RoleBadge from "@/components/RoleBadge";
 
 const MonthlySummary = () => {

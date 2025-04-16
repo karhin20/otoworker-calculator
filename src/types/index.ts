@@ -140,6 +140,7 @@ export interface RiskSummary {
 export type AdminRole = 
   | "Standard"       // Basic admin - can add entries
   | "Supervisor"     // District Supervisor - first approval
+  | "Accountant"     // Regional Accountant - can edit amounts
   | "Director";      // Regional Director - final approval
 
 // Approval status for overtime and transport entries

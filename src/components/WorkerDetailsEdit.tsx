@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { WorkerDetailWithApproval, ApprovalStatus } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, ThumbsDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { overtime } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getDisplayRole, getDisplayApprovalStatus } from "@/utils/displayRoles";
+import { getDisplayApprovalStatus } from "@/utils/displayRoles";
 
 interface WorkerDetailsEditProps {
   entry: WorkerDetailWithApproval;
@@ -123,6 +123,8 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
   }, [formData.category_a_hours, formData.category_c_hours]);
 
   // Helper function to determine the next approval status based on current status and user role
+  // Commented out as it's not used
+  /*
   const getNextApprovalStatus = (currentStatus: string, userRole: string): string => {
     if (userRole === "Director") {
       return "Approved";
@@ -133,8 +135,11 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
       return currentStatus;
     }
   };
+  */
 
   // Check if the current user can approve this entry
+  // Commented out as it's not used
+  /*
   const canApprove = (): boolean => {
     if (!entry) return false;
     
@@ -153,6 +158,7 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
     
     return false; // No other combinations are allowed
   };
+  */
 
   // Handle rejection
   const handleReject = async () => {
