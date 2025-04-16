@@ -139,8 +139,11 @@ export interface RiskSummary {
 // Admin roles for hierarchical approval system
 export type AdminRole = 
   | "Standard"       // Basic admin - can add entries
+  | "District_Head"  // District Head - can review entries
   | "Supervisor"     // District Supervisor - first approval
+  | "RDM"            // Regional District Manager - first level approval
   | "Accountant"     // Regional Accountant - can edit amounts
+  | "RCM"            // Regional Credit Manager - final approval
   | "Director";      // Regional Director - final approval
 
 // Approval status for overtime and transport entries

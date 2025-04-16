@@ -7,9 +7,15 @@ export const getDisplayRole = (role: string): string => {
   switch (role) {
     case 'Standard':
       return 'Dist Head';
+    case 'District_Head':
+      return 'Dist Head';
     case 'Supervisor':
       return 'RDM';
+    case 'RDM':
+      return 'RDM';
     case 'Director':
+      return 'RCM';
+    case 'RCM':
       return 'RCM';
     case 'Accountant':
       return 'Accountant';
@@ -29,14 +35,20 @@ export const getFullDisplayRole = (role: string): string => {
   switch (role) {
     case 'Standard':
       return 'District Head';
+    case 'District_Head':
+      return 'District Head';
     case 'Supervisor':
-      return 'RDM';
+      return 'Regional District Manager';
+    case 'RDM':
+      return 'Regional District Manager';
     case 'Director':
-      return 'RCM';
+      return 'Regional Credit Manager';
+    case 'RCM':
+      return 'Regional Credit Manager';
     case 'Accountant':
-      return 'Accountant';
+      return 'Regional Accountant';
     case 'Developer':
-      return 'Developer';
+      return 'System Developer';
     default:
       return role || 'Staff';
   }
@@ -51,9 +63,15 @@ export const getDisplayApprovalStatus = (status: string): string => {
   switch (status) {
     case 'Standard':
       return 'Dist Head';
+    case 'District_Head':
+      return 'Dist Head';
     case 'Supervisor':
       return 'RDM';
+    case 'RDM':
+      return 'RDM';
     case 'Director':
+      return 'RCM';
+    case 'RCM':
       return 'RCM';
     default:
       return status;

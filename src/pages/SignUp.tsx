@@ -39,8 +39,11 @@ const SignUp = () => {
   
   const adminRoles: { value: AdminRole; label: string; description: string }[] = [
     { value: "Standard", label: "Standard Admin", description: "Can add entries only" },
+    { value: "District_Head", label: "District Head", description: "Can review and manage district entries" },
     { value: "Supervisor", label: "District Supervisor", description: "Can approve entries (first level)" },
+    { value: "RDM", label: "Regional District Manager (RDM)", description: "Can approve entries from multiple districts (first level)" },
     { value: "Accountant", label: "Regional Accountant", description: "Can edit amounts and approve entries (second level)" },
+    { value: "RCM", label: "Regional Credit Manager (RCM)", description: "Can give final approval for financial aspects" },
     { value: "Director", label: "Regional Director", description: "Can give final approval (third level)" }
   ];
 
