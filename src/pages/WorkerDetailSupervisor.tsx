@@ -1,38 +1,37 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, ChevronLeft, ChevronRight, Pencil, AlertCircle, Clock, CheckCircle2, Home, Calendar, Shield, BarChart, Trash2, Edit, ThumbsUp, Loader2 } from "lucide-react";
-import { format } from "date-fns"; // Ensure this import is present
+import { LogOut, ChevronLeft, ChevronRight, Home, Calendar, Shield, BarChart, Edit, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import { workers, overtime } from "@/lib/api";
-import { Worker, WorkerDetail, WorkerDetailWithApproval, ApprovalStatus } from "@/types";
+import { Worker, WorkerDetail, WorkerDetailWithApproval } from "@/types";
 import { getAndClearNotification } from "@/utils/notifications";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
-import WorkerDetailsEdit from "@/components/WorkerDetailsEdit";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { getDisplayRole, getFullDisplayRole, getDisplayApprovalStatus } from "@/utils/displayRoles";
+import { getDisplayApprovalStatus } from "@/utils/displayRoles";
 import RoleBadge from "@/components/RoleBadge";
 
-const WorkerDetails = () => {
+const WorkerDetailSupervisor = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const workerIdFromQuery = queryParams.get('id');
+
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedWorker, setSelectedWorker] = useState("");
+  const [selectedWorker, setSelectedWorker] = useState(workerIdFromQuery || "");
   const [details, setDetails] = useState<WorkerDetail[]>([]);
   const [workersList, setWorkersList] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<{ id: string; name: string; staffId: string; grade: string; role?: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [selectedEntry, setSelectedEntry] = useState<WorkerDetailWithApproval | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>("Standard");
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [summaryEditForm, setSummaryEditForm] = useState({
     category_a_amount: 0,
@@ -40,9 +39,8 @@ const WorkerDetails = () => {
     transportation_cost: 0
   });
   const [isSavingSummary, setIsSavingSummary] = useState(false);
-  const [approvalEntryId, setApprovalEntryId] = useState<string | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
-  const [isConfirmingApproval, setIsConfirmingApproval] = useState(false);
+  const [isApprovingAll, setIsApprovingAll] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -50,24 +48,38 @@ const WorkerDetails = () => {
       const userData = JSON.parse(userStr);
       setUser(userData);
       setUserRole(userData.role || "Standard");
+      
+      // Redirect if not Supervisor or Director
+      if (!userData.role || userData.role === "Standard") {
+        navigate("/worker-details"); // Redirect standard users to regular details
+      }
+    } else {
+      navigate("/"); // Redirect if not logged in
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const fetchWorkers = async () => {
       try {
         const data = await workers.getAll();
-        // Use type assertion as a workaround for potential type definition mismatch
         setWorkersList(data as any[]); 
+        
+        // If we have a workerId from query and it's valid, select it
+        if (workerIdFromQuery) {
+          const isValidWorker = data.some(w => w.id === workerIdFromQuery);
+          if (isValidWorker) {
+            setSelectedWorker(workerIdFromQuery);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch workers:", error);
       }
     };
 
     fetchWorkers();
-  }, []);
+  }, [workerIdFromQuery]);
 
-  // Define fetchDetails function for reuse outside the useEffect
+  // Define fetchDetails function for reuse
   const fetchDetails = async () => {
     if (!selectedWorker) return;
 
@@ -272,103 +284,10 @@ const WorkerDetails = () => {
   }, [currentPage, totalPages, handlePageChange]);
 
   // Get appropriate badge for approval status
-  const getApprovalBadge = (status: ApprovalStatus) => {
-    switch (status) {
-      case "Pending":
-        return <Badge variant="outline" className="flex items-center gap-1 text-xs py-1"><Clock className="h-3.5 w-3.5" /> Pending</Badge>;
-      case "Standard":
-        return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-green-100 text-green-800 border-green-200"><CheckCircle2 className="h-3.5 w-3.5" /> {getDisplayApprovalStatus(status)}</Badge>;
-      case "Supervisor":
-        return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-blue-100 text-blue-800 border-blue-200"><CheckCircle2 className="h-3.5 w-3.5" /> {getDisplayApprovalStatus(status)}</Badge>;
-      case "Accountant":
-        return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-purple-100 text-purple-800 border-purple-200"><CheckCircle2 className="h-3.5 w-3.5" /> {getDisplayApprovalStatus(status)}</Badge>;
-      case "Approved":
-        return <Badge variant="success" className="flex items-center gap-1 text-xs py-1"><CheckCircle2 className="h-3.5 w-3.5" /> Approved</Badge>;
-      case "Rejected":
-        return <Badge variant="destructive" className="flex items-center gap-1 text-xs py-1"><AlertCircle className="h-3.5 w-3.5" /> Rejected</Badge>;
-    }
+  const getApprovalBadge = (status: string) => {
+    return <Badge variant="outline" className="py-1 px-2 text-xs">{getDisplayApprovalStatus(status)}</Badge>;
   };
-
-  // Handler for opening the edit dialog
-  const handleEditEntry = (entry: WorkerDetailWithApproval) => {
-    setSelectedEntry(entry);
-    setIsEditDialogOpen(true);
-  };
-
-  // Handler for closing the edit dialog
-  const handleCloseEditDialog = () => {
-    setIsEditDialogOpen(false);
-    setSelectedEntry(null);
-  };
-
-  // Handler for refreshing data after an entry update
-  const handleEntryUpdated = () => {
-    if (selectedWorker) {
-      fetchDetails();
-    }
-  };
-
-  // Can user edit this entry?
-  const canEdit = (status: ApprovalStatus): boolean => {
-    // Follow hierarchical approval flow for editing
-    if (userRole === "Standard" && status === "Pending") {
-      return true; // Standard admin can only edit pending entries
-    }
-    
-    if (userRole === "Supervisor" && status === "Standard") {
-      return true; // Supervisors can only edit Standard-approved entries
-    }
-    
-    if (userRole === "Accountant" && status === "Supervisor") {
-      return true; // Accountants can only edit Supervisor-approved entries
-    }
-    
-    if (userRole === "Director") {
-      return false; // Directors can only approve/reject
-    }
-    
-    return false; // No other combinations are allowed
-  };
-
-  // Handler for initiating delete
-  const handleDeleteEntry = (entryId: string) => {
-    setDeletingEntryId(entryId);
-    setIsDeleteDialogOpen(true);
-  };
-
-  // Handler for confirming delete
-  const confirmDeleteEntry = async () => {
-    if (!deletingEntryId) return;
-
-    try {
-      await overtime.delete(deletingEntryId);
-      toast({
-        title: "Success",
-        description: "Overtime entry deleted successfully.",
-      });
-      setDeletingEntryId(null);
-      setIsDeleteDialogOpen(false);
-      fetchDetails(); // Refresh the list
-    } catch (error) {
-      console.error("Failed to delete overtime entry:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete entry.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Can user delete this entry?
-  const canDelete = (entry: WorkerDetailWithApproval): boolean => {
-    // Standard role can only delete PENDING or REJECTED entries
-    if (userRole === "Standard") {
-      return (entry.approval_status === "Pending" || entry.approval_status === "Rejected");
-    }
-    // No other roles can delete
-    return false;
-  };
-
+  
   // Handle monthly summary editing
   const handleEditSummary = () => {
     if (!selectedWorker) return;
@@ -403,6 +322,12 @@ const WorkerDetails = () => {
     
     try {
       setIsSavingSummary(true);
+      
+      toast({
+        title: "Distributing Amounts",
+        description: "The totals will be distributed proportionally across all entries based on hours worked.",
+      });
+      
       await overtime.updateMonthlyAmounts(
         selectedWorker,
         selectedMonth,
@@ -412,7 +337,7 @@ const WorkerDetails = () => {
       
       toast({
         title: "Success",
-        description: "Monthly summary amounts updated successfully",
+        description: "Monthly summary amounts updated and distributed to individual entries.",
       });
       
       setIsEditingSummary(false);
@@ -431,84 +356,45 @@ const WorkerDetails = () => {
     }
   };
 
-  // Handle initiating approval process
-  const handleApproveEntry = (entryId: string) => {
-    setApprovalEntryId(entryId);
+  // Handle approval of all entries
+  const handleApproveAll = () => {
+    if (!selectedWorker) return;
     setIsApprovalDialogOpen(true);
-    setIsConfirmingApproval(false); // Reset the confirmation state
   };
-  
-  // Handle confirming approval
-  const confirmApproval = async () => {
-    if (!approvalEntryId) return;
+
+  // Confirm approval of all entries
+  const confirmApproveAll = async () => {
+    if (!selectedWorker) return;
     
     try {
-      setIsConfirmingApproval(true); // Set confirming state to true to disable button
-      setLoading(true); // Start loading indicator
+      setIsApprovingAll(true);
       
-      // Find the entry to get its approval status
-      const entryToApprove = details.find(d => d.id === approvalEntryId);
-      if (!entryToApprove) {
-        throw new Error("Entry not found");
-      }
-      
-      const currentStatus = (entryToApprove as WorkerDetailWithApproval).approval_status || "Pending";
-      let nextStatus: string;
-      
-      // Determine next status based on user role and current status
-      if (userRole === "Director" && currentStatus === "Supervisor") {
-        nextStatus = "Approved";
-      } else if (userRole === "Supervisor" && currentStatus === "Standard") {
-        nextStatus = "Supervisor";
-      } else if (userRole === "Standard" && currentStatus === "Pending") {
-        nextStatus = "Standard";
-      } else {
-        throw new Error("Invalid approval path");
-      }
-      
-      // Get user info for tracking who approved
-      const userInfo = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")!) : null;
-      const userName = userInfo?.name || "Unknown User";
-      
-      await overtime.approve(approvalEntryId, nextStatus, userName);
+      await overtime.approveWorker(
+        selectedWorker,
+        selectedMonth,
+        selectedYear
+      );
       
       toast({
         title: "Success",
-        description: `Entry ${nextStatus === 'Approved' ? 'approved' : 'moved to ' + nextStatus}`,
+        description: "All entries have been approved",
       });
       
-      // Reset state and refresh
-      setApprovalEntryId(null);
+      // Refresh data
+      setTimeout(() => {
+        fetchDetails();
+      }, 300);
+      
       setIsApprovalDialogOpen(false);
-      fetchDetails(); // Refresh the details
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to approve entry",
+        description: error.message || "Failed to approve entries",
         variant: "destructive",
       });
     } finally {
-      setLoading(false); // Stop loading indicator regardless of outcome
-      setIsConfirmingApproval(false); // Reset confirmation state
+      setIsApprovingAll(false);
     }
-  };
-
-  // Can user approve this entry?
-  const canApprove = (status: ApprovalStatus): boolean => {
-    // Follow hierarchical approval flow
-    if (userRole === "Standard" && status === "Pending") {
-      return true; // Standard admin can approve pending entries to start the flow
-    }
-    
-    if (userRole === "Supervisor" && status === "Standard") {
-      return true; // Supervisors can only approve entries already approved by Standard admin
-    }
-    
-    if (userRole === "Director" && status === "Supervisor") {
-      return true; // Directors can only approve entries already approved by Supervisors
-    }
-    
-    return false; // No other combinations are allowed
   };
 
   return (
@@ -539,25 +425,25 @@ const WorkerDetails = () => {
           <div className="flex gap-4 mb-6">
             <Button
               variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/dashboard" : "/supervisor-dashboard")}
+              onClick={() => navigate("/supervisor-dashboard")}
             >
               <Home className="mr-2 h-4 w-4" /> Dashboard
             </Button>
             <Button
               variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/monthly-summary" : "/supervisor-monthly-summary")}
+              onClick={() => navigate("/supervisor-monthly-summary")}
             >
               <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
             </Button>
             <Button
               variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/risk-management" : "/supervisor-risk-management")}
+              onClick={() => navigate("/supervisor-risk-management")}
             >
               <Shield className="mr-2 h-4 w-4" /> Risk Application
             </Button>
             <Button
               variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/analytics" : "/supervisor-analytics")}
+              onClick={() => navigate("/supervisor-analytics")}
             >
               <BarChart className="mr-2 h-4 w-4" /> Analytics
             </Button>
@@ -632,7 +518,7 @@ const WorkerDetails = () => {
                     <Skeleton className="h-10 w-full" />
                   </div>
                 </div>
-                <TableSkeleton rows={6} columns={7} />
+                <TableSkeleton rows={6} columns={6} />
               </div>
             ) : details.length > 0 ? (
               <>
@@ -650,9 +536,6 @@ const WorkerDetails = () => {
                           Exit Time
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Category A Hours
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -663,9 +546,6 @@ const WorkerDetails = () => {
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
                         </th>
                       </tr>
                     </thead>
@@ -682,9 +562,6 @@ const WorkerDetails = () => {
                             {detail.exit_time}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {detail.category}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {detail.category_a_hours}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -692,53 +569,17 @@ const WorkerDetails = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {detail.transportation 
-                              ? <span className="font-bold text-green-600">₵{(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}</span>
+                              ? <span className="font-bold text-blue-600">₵{(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}</span>
                               : 'No'
                             }
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {getApprovalBadge((detail as WorkerDetailWithApproval).approval_status || "Pending")}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex space-x-2">
-                              <Button
-                                variant={canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending") ? "ghost" : "outline"}
-                                onClick={() => handleEditEntry(detail as WorkerDetailWithApproval)}
-                                disabled={!canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending")}
-                                size="sm"
-                                className={canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending") ? "hover:bg-blue-50 hover:text-blue-700" : ""}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                onClick={() => handleDeleteEntry(detail.id)}
-                                disabled={!canDelete(detail as WorkerDetailWithApproval)}
-                                size="sm"
-                                className={canDelete(detail as WorkerDetailWithApproval) ? "text-red-600 hover:bg-red-50 hover:text-red-700" : "text-gray-400 cursor-not-allowed"}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              {canApprove((detail as WorkerDetailWithApproval).approval_status || "Pending") && (
-                                <Button
-                                  variant="ghost"
-                                  onClick={() => handleApproveEntry(detail.id)}
-                                  size="sm"
-                                  className={
-                                    userRole === "Standard" ? "text-green-600 hover:bg-green-50 hover:text-green-700" :
-                                    userRole === "Supervisor" ? "text-blue-600 hover:bg-blue-50 hover:text-blue-700" :
-                                    "text-purple-600 hover:bg-purple-50 hover:text-purple-700"
-                                  }
-                                >
-                                  <ThumbsUp className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </td>
                         </tr>
                       ))}
                       <tr className="bg-gray-50 font-medium">
-                        <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           Totals {isEditingSummary && <span className="text-xs text-blue-600">(Editing)</span>}
                         </td>
                         {isEditingSummary ? (
@@ -772,7 +613,7 @@ const WorkerDetails = () => {
                                 placeholder="Transport (₵)"
                               />
                             </td>
-                            <td colSpan={2} className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                               <Button 
                                 variant="outline" 
                                 size="sm" 
@@ -794,18 +635,18 @@ const WorkerDetails = () => {
                         ) : (
                           <>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="text-green-600 font-bold text-base">₵{totals.totalCategoryAAmount.toFixed(2)}</div>
+                              <div className="text-blue-600 font-bold text-base">₵{totals.totalCategoryAAmount.toFixed(2)}</div>
                               <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryA.toFixed(2)} hrs</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="text-green-600 font-bold text-base">₵{totals.totalCategoryCAmount.toFixed(2)}</div>
+                              <div className="text-blue-600 font-bold text-base">₵{totals.totalCategoryCAmount.toFixed(2)}</div>
                               <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryC.toFixed(2)} hrs</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="text-green-600 font-bold text-base">₵{totals.totalTransport.toFixed(2)}</div>
+                              <div className="text-blue-600 font-bold text-base">₵{totals.totalTransport.toFixed(2)}</div>
                             </td>
-                            <td colSpan={2} className="px-6 py-4 whitespace-nowrap">
-                              {(userRole === "Standard" || userRole === "Supervisor" || userRole === "Accountant") && (
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {(userRole === "Supervisor" || userRole === "Accountant") && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -822,21 +663,33 @@ const WorkerDetails = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-4 flex justify-end space-x-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => exportWorkerDetails('transportation')}
-                    disabled={!details.length}
-                  >
-                    Export Transportation
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => exportWorkerDetails('overtime')}
-                    disabled={!details.length}
-                  >
-                    Export Overtime
-                  </Button>
+                <div className="mt-4 flex justify-between">
+                  {userRole === "Supervisor" && (
+                    <Button
+                      variant="supervisor"
+                      size="sm"
+                      onClick={handleApproveAll}
+                      disabled={!selectedWorker || details.length === 0}
+                    >
+                      Approve All Entries
+                    </Button>
+                  )}
+                  <div className={`flex space-x-4 ${userRole !== "Supervisor" ? "ml-auto" : ""}`}>
+                    <Button
+                      variant="outline"
+                      onClick={() => exportWorkerDetails('transportation')}
+                      disabled={!details.length}
+                    >
+                      Export Transportation
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => exportWorkerDetails('overtime')}
+                      disabled={!details.length}
+                    >
+                      Export Overtime
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
                   <div className="flex flex-1 justify-between sm:hidden">
@@ -921,78 +774,37 @@ const WorkerDetails = () => {
             )}
           </div>
         </Card>
+
+        {/* Approval Confirmation Dialog */}
+        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Approval</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to approve all entries for this worker's monthly summary?
+                This will approve all entries with 'Standard' status to 'Supervisor' status.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsApprovalDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={confirmApproveAll}
+                disabled={isApprovingAll}
+                variant="supervisor"
+              >
+                {isApprovingAll ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : "Approve All"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Edit Entry Dialog */}
-      {selectedEntry && (
-        <WorkerDetailsEdit
-          entry={selectedEntry}
-          isOpen={isEditDialogOpen}
-          onClose={handleCloseEditDialog}
-          onUpdate={handleEntryUpdated}
-          userRole={userRole}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this overtime entry? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteEntry}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Approval Confirmation Dialog */}
-      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Approval</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to approve this overtime entry?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              onClick={confirmApproval} 
-              disabled={isConfirmingApproval}
-              className={
-                userRole === "Standard" ? "bg-green-600 hover:bg-green-700" :
-                userRole === "Supervisor" ? "bg-blue-600 hover:bg-blue-700" :
-                "bg-purple-600 hover:bg-purple-700"
-              }
-            >
-              {isConfirmingApproval ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <ThumbsUp className="mr-2 h-4 w-4" />
-                  {userRole === "Director" ? "Final Approval" : `Approve as ${getDisplayRole(userRole)}`}
-                </>
-              )}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsApprovalDialogOpen(false)} 
-              disabled={isConfirmingApproval}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
 
-export default WorkerDetails;
+export default WorkerDetailSupervisor; 

@@ -13,6 +13,8 @@ import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { getDisplayRole } from "@/utils/displayRoles";
+import RoleBadge from "@/components/RoleBadge";
 
 // Rename component
 const SupervisorMonthlySummary = () => {
@@ -185,19 +187,6 @@ const SupervisorMonthlySummary = () => {
             )}
           </div>
         );
-      case "Accountant":
-        return (
-          <div className="flex flex-col">
-            <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-purple-100 text-purple-800 border-purple-200">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Accountant {countText}
-            </Badge>
-            {totalEntries > 0 && statusCounts.Accountant !== totalEntries && (
-              <div className="text-xs mt-1 text-muted-foreground">
-                {statusCounts.Accountant || 0} accountant, {statusCounts.Supervisor || 0} supervisor
-              </div>
-            )}
-          </div>
-        );
       case "Approved":
         return (
           <div className="flex flex-col">
@@ -235,9 +224,7 @@ const SupervisorMonthlySummary = () => {
 
     // Strict hierarchy-based permissions
     let canEditRole = false;
-    if (userRole === "Director" && currentStatuses.includes("Accountant")) {
-        canEditRole = true;
-    } else if (userRole === "Accountant" && currentStatuses.includes("Supervisor")) {
+    if (userRole === "Director" && currentStatuses.includes("Supervisor")) {
         canEditRole = true;
     } else if (userRole === "Supervisor" && currentStatuses.includes("Standard")) {
         canEditRole = true;
@@ -308,7 +295,7 @@ const SupervisorMonthlySummary = () => {
 
       toast({
         title: "Success",
-        description: "All Accountant-reviewed entries have been approved.",
+        description: "All Supervisor-reviewed entries have been approved.",
       });
 
       // Refresh data
@@ -338,8 +325,6 @@ const SupervisorMonthlySummary = () => {
           return statuses.includes("Standard");
         case "supervisor":
           return statuses.includes("Supervisor");
-        case "accountant":
-          return statuses.includes("Accountant");
         case "approved":
           return statuses.every((status: ApprovalStatus) => status === "Approved");
         case "rejected":
@@ -464,9 +449,7 @@ const SupervisorMonthlySummary = () => {
               {user && (
                 <p className="mt-2 text-lg text-gray-600">
                   Hello, {user.name} ({user.staffId})
-                  {userRole && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {userRole} Role
-                  </span>}
+                  {userRole && <span className="ml-2"><RoleBadge role={userRole} showFullName={true} /></span>}
                 </p>
               )}
             </div>
@@ -553,7 +536,6 @@ const SupervisorMonthlySummary = () => {
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="standard">Standard Approved</SelectItem>
                     <SelectItem value="supervisor">Supervisor Approved</SelectItem>
-                    <SelectItem value="accountant">Accountant Approved</SelectItem>
                     <SelectItem value="approved">Fully Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
@@ -581,7 +563,7 @@ const SupervisorMonthlySummary = () => {
                         disabled={loading}
                         className="gap-1"
                     >
-                        <ThumbsUp className="h-5 w-5" /> Approve All Accountant-Reviewed Entries
+                        <ThumbsUp className="h-5 w-5" /> Approve All Supervisor-Reviewed Entries
                     </Button>
                 </div>
             )}
@@ -693,14 +675,13 @@ const SupervisorMonthlySummary = () => {
                            ) : (
                              <>
                                 {/* Edit button for both Supervisor and Accountant */}
-                                {(userRole === "Accountant" || userRole === "Supervisor") && (
+                                {userRole === "Supervisor" && (
                                    <Button
-                                     variant={userRole === "Accountant" ? "accountant" : "outline"}
+                                     variant="outline"
                                      size="sm"
                                      onClick={() => handleEditWorker(summaryItem.worker_id, summaryItem as any)}
                                      disabled={loading || editingWorkerId !== null || 
-                                       (userRole === "Accountant" && !(summaryItem as any).approval_statuses?.includes("Supervisor")) ||
-                                       (userRole === "Supervisor" && !(summaryItem as any).approval_statuses?.includes("Standard") && !(summaryItem as any).approval_statuses?.includes("Pending"))}
+                                       !(summaryItem as any).approval_statuses?.includes("Standard") && !(summaryItem as any).approval_statuses?.includes("Pending")}
                                      title={`Edit amounts (${userRole})`}
                                    >
                                      <Edit className="h-4 w-4" />
@@ -723,29 +704,13 @@ const SupervisorMonthlySummary = () => {
                                    </Button>
                                 )}
                                 
-                                {/* Approve button for Accountant */}
-                                {userRole === "Accountant" && (
-                                   <Button
-                                     variant="accountant"
-                                     size="sm"
-                                     onClick={() => handleApproveWorker(summaryItem.worker_id)}
-                                     disabled={loading || editingWorkerId !== null || 
-                                       !(summaryItem as any).approval_statuses?.includes("Supervisor") ||
-                                       (summaryItem as any).approval_statuses?.includes("Accountant") ||
-                                       (summaryItem as any).approval_statuses?.includes("Approved")}
-                                     title="Approve as Accountant"
-                                   >
-                                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
-                                   </Button>
-                                )}
-                                
-                                {/* View Details button for Director at Accountant stage */}
+                                {/* View Details button for Director at Supervisor stage */}
                                 {userRole === "Director" && (
                                     <Button
                                         variant="director"
                                         size="sm"
-                                        onClick={() => navigate(`/worker-details?id=${summaryItem.worker_id}`)} // Navigate to worker details with ID
-                                        disabled={!(summaryItem as any).approval_statuses?.includes("Accountant")}
+                                        onClick={() => navigate(`/worker-details-supervisor?id=${summaryItem.worker_id}`)} // Navigate to supervisor worker details with ID
+                                        disabled={!(summaryItem as any).approval_statuses?.includes("Supervisor")}
                                         title="View details for final approval"
                                     >
                                         <Users className="h-4 w-4" />

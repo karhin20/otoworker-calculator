@@ -11,6 +11,8 @@ import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Input } from "@/components/ui/input";
 import { getAndClearNotification } from "@/utils/notifications";
+import { getDisplayRole } from "@/utils/displayRoles";
+import RoleBadge from "@/components/RoleBadge";
 
 const ResponsiveTable = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -194,10 +196,8 @@ const SupervisorDashboard = () => {
               </h1>
               {user ? (
                 <p className="mt-2 text-lg text-gray-600">
-                  Hello, {user.name}! You are logged in as
-                  {user.role && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {user.role} Role
-                  </span>}
+                  Hello, {user.name} ({user.staffId})
+                  {user.role && <span className="ml-2"><RoleBadge role={user.role} showFullName={true} /></span>}
                 </p>
               ) : (
                 <p className="mt-2 text-lg text-gray-600">
@@ -298,7 +298,7 @@ const SupervisorDashboard = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredSummary.map((summary) => (
-                      <tr key={summary.worker_id}>
+                      <tr key={summary.worker_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/worker-details-supervisor?id=${summary.worker_id}`)}>
                         <td className="px-8 py-6 whitespace-nowrap text-base font-medium text-gray-900">
                           {summary.name}
                         </td>

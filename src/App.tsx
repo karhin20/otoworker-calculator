@@ -24,6 +24,7 @@ import SupervisorAnalytics from "@/pages/SupervisorAnalytics";
 import SupervisorMonthlySummary from "@/pages/SupervisorMonthlySummary";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import DeveloperRoleHelper from "@/components/DeveloperRoleHelper";
+import WorkerDetailSupervisor from "./pages/WorkerDetailSupervisor";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <WorkerDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/worker-details-supervisor"
+              element={
+                <ProtectedRoute>
+                  <WorkerDetailSupervisor />
                 </ProtectedRoute>
               }
             />

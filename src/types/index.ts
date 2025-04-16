@@ -140,17 +140,10 @@ export interface RiskSummary {
 export type AdminRole = 
   | "Standard"       // Basic admin - can add entries
   | "Supervisor"     // District Supervisor - first approval
-  | "Accountant"     // Regional Accountant - can edit amounts
   | "Director";      // Regional Director - final approval
 
 // Approval status for overtime and transport entries
-export type ApprovalStatus = 
-  | "Pending"        // Initial state
-  | "Standard"       // Approved by Standard Admin
-  | "Supervisor"     // Approved by District Supervisor 
-  | "Accountant"     // Approved by Regional Accountant
-  | "Approved"       // Final approval by Regional Director
-  | "Rejected";      // Rejected at any stage
+export type ApprovalStatus = "Pending" | "Standard" | "Supervisor" | "Accountant" | "Approved" | "Rejected";
 
 // Extended worker detail with approval information
 export interface WorkerDetailWithApproval extends WorkerDetail {

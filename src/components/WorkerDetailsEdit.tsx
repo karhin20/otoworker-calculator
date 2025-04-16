@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { overtime } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getDisplayRole, getDisplayApprovalStatus } from "@/utils/displayRoles";
 
 interface WorkerDetailsEditProps {
   entry: WorkerDetailWithApproval;
@@ -36,7 +37,6 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
   const [isEditable, setIsEditable] = useState(true);
   const [_isAccountantEditMode, _setIsAccountantEditMode] = useState(false);
   const [confirmReject, setConfirmReject] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
   const [entryTime, setEntryTime] = useState(entry.entry_time || "");
   const [exitTime, setExitTime] = useState(entry.exit_time || "");
   const [categoryAHours, setCategoryAHours] = useState(entry.category_a_hours?.toString() || "0");
@@ -76,8 +76,6 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
         return status === "Pending"; // Standard admin can only edit pending entries
       case "Supervisor":
         return status === "Standard"; // Supervisors can only edit Standard-approved entries
-      case "Accountant":
-        return status === "Supervisor"; // Accountants can only edit Supervisor-approved entries
       case "Director":
         return false; // Directors can only approve/reject
       default:
@@ -89,19 +87,19 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
   const getApprovalBadge = (status: ApprovalStatus) => {
     switch (status) {
       case "Pending":
-        return <Badge variant="outline" className="flex items-center gap-1 text-xs py-1"><Clock className="h-3.5 w-3.5" /> Pending</Badge>;
+        return <Badge variant="outline" className="flex items-center gap-1"><Clock className="h-4 w-4 mr-1" /> Pending</Badge>;
       case "Standard":
-        return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-green-100 text-green-800 border-green-200"><CheckCircle2 className="h-3.5 w-3.5" /> Standard</Badge>;
+        return <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800 border-green-200"><CheckCircle2 className="h-4 w-4 mr-1" /> {getDisplayApprovalStatus(status)}</Badge>;
       case "Supervisor":
-        return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-blue-100 text-blue-800 border-blue-200"><CheckCircle2 className="h-3.5 w-3.5" /> Supervisor</Badge>;
+        return <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800 border-blue-200"><CheckCircle2 className="h-4 w-4 mr-1" /> {getDisplayApprovalStatus(status)}</Badge>;
       case "Accountant":
-        return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-purple-100 text-purple-800 border-purple-200"><CheckCircle2 className="h-3.5 w-3.5" /> Accountant</Badge>;
+        return <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 text-purple-800 border-purple-200"><CheckCircle2 className="h-4 w-4 mr-1" /> {getDisplayApprovalStatus(status)}</Badge>;
       case "Approved":
-        return <Badge variant="success" className="flex items-center gap-1 text-xs py-1"><CheckCircle2 className="h-3.5 w-3.5" /> Approved</Badge>;
+        return <Badge variant="success" className="flex items-center gap-1"><CheckCircle2 className="h-4 w-4 mr-1" /> Approved</Badge>;
       case "Rejected":
-        return <Badge variant="destructive" className="flex items-center gap-1 text-xs py-1"><AlertCircle className="h-3.5 w-3.5" /> Rejected</Badge>;
+        return <Badge variant="destructive" className="flex items-center gap-1"><AlertCircle className="h-4 w-4 mr-1" /> Rejected</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -116,22 +114,18 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
 
   // Calculate amounts based on hours
   useEffect(() => {
-    // Only auto-calculate if not in accountant edit mode
-    if (!_isAccountantEditMode) {
-      setFormData(prev => ({
-        ...prev,
-        category_a_amount: prev.category_a_hours * 2,
-        category_c_amount: prev.category_c_hours * 3
-      }));
-    }
-  }, [formData.category_a_hours, formData.category_c_hours, _isAccountantEditMode]);
+    // Always auto-calculate - no special accountant mode
+    setFormData(prev => ({
+      ...prev,
+      category_a_amount: prev.category_a_hours * 2,
+      category_c_amount: prev.category_c_hours * 3
+    }));
+  }, [formData.category_a_hours, formData.category_c_hours]);
 
   // Helper function to determine the next approval status based on current status and user role
   const getNextApprovalStatus = (currentStatus: string, userRole: string): string => {
     if (userRole === "Director") {
       return "Approved";
-    } else if (userRole === "Accountant" && (currentStatus === "Pending" || currentStatus === "Supervisor")) {
-      return "Accountant";
     } else if (userRole === "Supervisor" && currentStatus === "Pending") {
       return "Supervisor";
     } else {
@@ -153,40 +147,11 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
       return true; // Supervisors can only approve entries already approved by Standard admin
     }
     
-    if (userRole === "Accountant" && entry.approval_status === "Supervisor") {
-      return true; // Accountants can only approve entries already approved by Supervisors
-    }
-    
-    if (userRole === "Director" && entry.approval_status === "Accountant") {
-      return true; // Directors can only approve entries already approved by Accountants
+    if (userRole === "Director" && entry.approval_status === "Supervisor") {
+      return true; // Directors can only approve entries already approved by Supervisors
     }
     
     return false; // No other combinations are allowed
-  };
-
-  const handleApprove = async (status: string) => {
-    try {
-      setIsApproving(true);
-      const nextStatus = getNextApprovalStatus(status, userRole);
-      const userInfo = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")!) : null;
-      const userName = userInfo?.name || "Unknown User";
-      await overtime.approve(entry.id, nextStatus, userName);
-      toast({
-        title: "Success",
-        description: `Entry ${nextStatus === 'Approved' ? 'approved' : 'moved to ' + nextStatus}`,
-      });
-      onUpdate();
-      onClose();
-    } catch (error) {
-      console.error("Error approving entry:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve entry",
-        variant: "destructive",
-      });
-    } finally {
-      setIsApproving(false);
-    }
   };
 
   // Handle rejection
@@ -223,11 +188,8 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
   // Generate time options (00:00 to 23:59 in 30 min increments)
   const timeOptions = [];
   for (let hour = 0; hour < 24; hour++) {
-    for (let minute of [0, 30]) {
-      const formattedHour = hour.toString().padStart(2, '0');
-      const formattedMinute = minute.toString().padStart(2, '0');
-      timeOptions.push(`${formattedHour}:${formattedMinute}`);
-    }
+    const formattedHour = hour.toString().padStart(2, '0');
+    timeOptions.push(`${formattedHour}:00`);
   }
 
   // Only accountants can edit amounts directly
@@ -515,27 +477,6 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
                 size="lg"
               >
                 <ThumbsDown className="h-5 w-5" /> {confirmReject ? "Confirm Reject" : "Reject"}
-              </Button>
-            )}
-
-            {canApprove() && (
-              <Button
-                type="button"
-                variant={
-                  userRole === "Standard" ? "standard" : 
-                  userRole === "Supervisor" ? "supervisor" : 
-                  userRole === "Accountant" ? "accountant" : 
-                  "director"
-                }
-                onClick={() => handleApprove(entry.approval_status)}
-                disabled={loading || isApproving}
-                className="gap-1"
-                size="lg"
-              >
-                <ThumbsUp className="h-5 w-5" /> 
-                {userRole === "Director" ? "Final Approval" : 
-                 userRole === "Standard" ? "Initial Approval" : 
-                 "Approve"}
               </Button>
             )}
           </div>

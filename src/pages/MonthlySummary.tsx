@@ -12,6 +12,8 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
 import { Badge } from "@/components/ui/badge";
+import { getDisplayRole } from "@/utils/displayRoles";
+import RoleBadge from "@/components/RoleBadge";
 
 const MonthlySummary = () => {
   const navigate = useNavigate();
@@ -138,11 +140,6 @@ const MonthlySummary = () => {
       return <Badge variant="success" className="flex items-center gap-1 text-xs py-1"><CheckCircle2 className="h-3.5 w-3.5" /> Approved</Badge>;
     }
     
-    // If any are accountant approved
-    if (statuses.includes("Accountant")) {
-      return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-purple-100 text-purple-800 border-purple-200"><CheckCircle2 className="h-3.5 w-3.5" /> Accountant</Badge>;
-    }
-    
     // If any are supervisor approved
     if (statuses.includes("Supervisor")) {
       return <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-blue-100 text-blue-800 border-blue-200"><CheckCircle2 className="h-3.5 w-3.5" /> Supervisor</Badge>;
@@ -168,13 +165,6 @@ const MonthlySummary = () => {
         transportation_cost: currentSummary.transportation_cost || 0
       });
     } else if (userRole === "Supervisor" && currentSummary.approval_statuses?.includes("Standard")) {
-      setEditingWorkerId(workerId);
-      setEditForm({
-        category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
-        category_c_amount: currentSummary.category_c_amount || currentSummary.category_c_hours * 3,
-        transportation_cost: currentSummary.transportation_cost || 0
-      });
-    } else if (userRole === "Accountant" && currentSummary.approval_statuses?.includes("Supervisor")) {
       setEditingWorkerId(workerId);
       setEditForm({
         category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
@@ -268,8 +258,6 @@ const MonthlySummary = () => {
           return statuses.includes("Standard");
         case "supervisor":
           return statuses.includes("Supervisor");
-        case "accountant":
-          return statuses.includes("Accountant");
         case "approved":
           return statuses.every((status: ApprovalStatus) => status === "Approved");
         case "rejected":
@@ -350,9 +338,7 @@ const MonthlySummary = () => {
               {user && (
                 <p className="mt-2 text-lg text-gray-600">
                   Hello, {user.name} ({user.staffId})
-                  {userRole && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {userRole} Role
-                  </span>}
+                  {userRole && <span className="ml-2"><RoleBadge role={userRole} showFullName={true} /></span>}
                 </p>
               )}
             </div>
@@ -413,7 +399,6 @@ const MonthlySummary = () => {
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="standard">Standard Approved</SelectItem>
                     <SelectItem value="supervisor">Supervisor Approved</SelectItem>
-                    <SelectItem value="accountant">Accountant Approved</SelectItem>
                     <SelectItem value="approved">Fully Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
@@ -638,7 +623,7 @@ const MonthlySummary = () => {
                                   </Button>
                                 )}
                                 
-                                {userRole === "Director" && summary.approval_statuses?.includes("Accountant") && (
+                                {userRole === "Director" && summary.approval_statuses?.includes("Supervisor") && (
                                   <Button
                                     variant="director"
                                     size="sm"
