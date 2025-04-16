@@ -14,6 +14,7 @@ import { getAndClearNotification } from "@/utils/notifications";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import RoleBadge from "@/components/RoleBadge";
+import { getDisplayApprovalStatus } from "@/utils/displayRoles";
 
 // Rename component
 const SupervisorMonthlySummary = () => {
@@ -155,7 +156,7 @@ const SupervisorMonthlySummary = () => {
             </Badge>
             {totalEntries > 0 && (
               <div className="text-xs mt-1 text-muted-foreground">
-                {statusCounts.Pending || 0} pending, {statusCounts.Standard || 0} standard
+                {statusCounts.Pending || 0} pending, {statusCounts.Standard || 0} {getDisplayApprovalStatus("Standard")}
               </div>
             )}
           </div>
@@ -164,11 +165,11 @@ const SupervisorMonthlySummary = () => {
         return (
           <div className="flex flex-col">
             <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-green-100 text-green-800 border-green-200">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Standard {countText}
+              <CheckCircle2 className="h-3.5 w-3.5" /> {getDisplayApprovalStatus("Standard")} {countText}
             </Badge>
             {totalEntries > 0 && statusCounts.Standard !== totalEntries && (
               <div className="text-xs mt-1 text-muted-foreground">
-                All entries must be Standard approved
+                All entries must be {getDisplayApprovalStatus("Standard")} approved
               </div>
             )}
           </div>
@@ -177,11 +178,11 @@ const SupervisorMonthlySummary = () => {
         return (
           <div className="flex flex-col">
             <Badge variant="secondary" className="flex items-center gap-1 text-xs py-1 bg-blue-100 text-blue-800 border-blue-200">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Supervisor {countText}
+              <CheckCircle2 className="h-3.5 w-3.5" /> {getDisplayApprovalStatus("Supervisor")} {countText}
             </Badge>
             {totalEntries > 0 && statusCounts.Supervisor !== totalEntries && (
               <div className="text-xs mt-1 text-muted-foreground">
-                {statusCounts.Supervisor || 0} supervisor, {statusCounts.Standard || 0} standard
+                {statusCounts.Supervisor || 0} {getDisplayApprovalStatus("Supervisor")}, {statusCounts.Standard || 0} {getDisplayApprovalStatus("Standard")}
               </div>
             )}
           </div>
@@ -200,17 +201,14 @@ const SupervisorMonthlySummary = () => {
             <Badge variant="destructive" className="flex items-center gap-1 text-xs py-1">
               <AlertCircle className="h-3.5 w-3.5" /> Rejected {countText}
             </Badge>
-            {totalEntries > 0 && (
-              <div className="text-xs mt-1 text-muted-foreground">
-                {statusCounts.Rejected || 0} rejected, {totalEntries - (statusCounts.Rejected || 0)} other
-              </div>
-            )}
           </div>
         );
       default:
         return (
           <div className="flex flex-col">
-            <Badge variant="outline">Unknown</Badge>
+            <Badge variant="outline" className="flex items-center gap-1 text-xs py-1">
+              <Clock className="h-3.5 w-3.5" /> {status} {countText}
+            </Badge>
           </div>
         );
     }
@@ -533,8 +531,8 @@ const SupervisorMonthlySummary = () => {
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="standard">Standard Approved</SelectItem>
-                    <SelectItem value="supervisor">Supervisor Approved</SelectItem>
+                    <SelectItem value="standard">{getDisplayApprovalStatus("Standard")} Approved</SelectItem>
+                    <SelectItem value="supervisor">{getDisplayApprovalStatus("Supervisor")} Approved</SelectItem>
                     <SelectItem value="approved">Fully Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
@@ -562,7 +560,7 @@ const SupervisorMonthlySummary = () => {
                         disabled={loading}
                         className="gap-1"
                     >
-                        <ThumbsUp className="h-5 w-5" /> Approve All Supervisor-Reviewed Entries
+                        <ThumbsUp className="h-5 w-5" /> Approve All {getDisplayApprovalStatus("Supervisor")}-Reviewed Entries
                     </Button>
                 </div>
             )}
@@ -681,7 +679,7 @@ const SupervisorMonthlySummary = () => {
                                      onClick={() => handleEditWorker(summaryItem.worker_id, summaryItem as any)}
                                      disabled={loading || editingWorkerId !== null || 
                                        !(summaryItem as any).approval_statuses?.includes("Standard") && !(summaryItem as any).approval_statuses?.includes("Pending")}
-                                     title={`Edit amounts (${userRole})`}
+                                     title={`Edit amounts (${getDisplayApprovalStatus(userRole)})`}
                                    >
                                      <Edit className="h-4 w-4" />
                                    </Button>
@@ -697,7 +695,7 @@ const SupervisorMonthlySummary = () => {
                                        !(summaryItem as any).approval_statuses?.includes("Standard") ||
                                        (summaryItem as any).approval_statuses?.includes("Supervisor") ||
                                        (summaryItem as any).approval_statuses?.includes("Approved")}
-                                     title="Approve as Supervisor"
+                                     title={`Approve as ${getDisplayApprovalStatus("Supervisor")}`}
                                    >
                                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
                                    </Button>
@@ -776,7 +774,12 @@ const SupervisorMonthlySummary = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Confirm Approval</DialogTitle>
-            <DialogDescription>Are you sure you want to approve the selected entries?</DialogDescription>
+            <DialogDescription>
+              {userRole === "Supervisor" ? 
+                `Are you sure you want to approve this worker's entries? This will change eligible entries from ${getDisplayApprovalStatus("Standard")} to ${getDisplayApprovalStatus("Supervisor")}.` : 
+                `Are you sure you want to approve all ${getDisplayApprovalStatus("Supervisor")}-reviewed entries?`
+              }
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button 
