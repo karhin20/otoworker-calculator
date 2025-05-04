@@ -38,10 +38,9 @@ const SignUp = () => {
   ];
   
   const adminRoles: { value: AdminRole; label: string; description: string }[] = [
-    { value: "Standard", label: "Standard Admin", description: "Can add entries only" },
-    { value: "District_Head", label: "District Head", description: "Can review and manage district entries" },
-    { value: "RDM", label: "RDM", description: "Can approve entries from multiple districts (first level)" },
-    { value: "RCM", label: "RCM", description: "Can give final approval for financial aspects" },
+    { value: "Standard", label: "District_Head", description: "Can add entries only" },
+    { value: "Supervisor", label: "RDM", description: "Can approve entries (first level)" },
+    { value: "Director", label: "RCM", description: "Can give final approval (third level)" }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
