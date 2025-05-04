@@ -38,8 +38,8 @@ const SignUp = () => {
   ];
   
   const adminRoles: { value: AdminRole; label: string; description: string }[] = [
-    { value: "Standard", label: "District_Head", description: "Can add entries only" },
-    { value: "Supervisor", label: "RDM", description: "Can approve entries (first level)" },
+    { value: "Standard", label: "District_Head", description: "Can add entries only and approve(first level" },
+    { value: "Supervisor", label: "RDM", description: "Can approve entries (Second level)" },
     { value: "Director", label: "RCM", description: "Can give final approval (third level)" }
   ];
 
