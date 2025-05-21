@@ -12,6 +12,7 @@ import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Input } from "@/components/ui/input";
 import { getAndClearNotification, notifySuccess } from "@/utils/notifications";
+import RoleBadge from "@/components/RoleBadge";
 
 const ResponsiveTable = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -224,9 +225,7 @@ const Index = () => {
               {user ? (
                 <p className="mt-2 text-lg text-gray-600">
                   Hello, {user.name}! You are logged in as 
-                  {user.role && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {user.role} Role
-                  </span>}
+                  {user.role && <span className="ml-2"><RoleBadge role={user.role} showFullName={true} /></span>}
                 </p>
               ) : (
                 <p className="mt-2 text-lg text-gray-600">
