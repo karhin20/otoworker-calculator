@@ -122,6 +122,29 @@ const WorkerDetailsEdit = ({ entry, isOpen, onClose, onUpdate, userRole }: Worke
     }));
   }, [formData.category_a_hours, formData.category_c_hours]);
 
+  // Auto-calculate overtime hours when entry/exit time or category changes
+  useEffect(() => {
+    if (!entryTime || !exitTime) return;
+    // Parse times (HH:mm)
+    const [entryHour, entryMin] = entryTime.split(":").map(Number);
+    const [exitHour, exitMin] = exitTime.split(":").map(Number);
+    let totalHours = (exitHour + exitMin / 60) - (entryHour + entryMin / 60);
+    if (totalHours < 0) totalHours += 24; // Handle overnight
+    // Overtime is hours above 9
+    const overtime = Math.max(0, totalHours - 9);
+    if (category === "A") {
+      setCategoryAHours(overtime.toFixed(2));
+      setCategoryAAmount((overtime * 2).toFixed(2));
+      setCategoryCHours("0");
+      setCategoryCAmount("0");
+    } else {
+      setCategoryCHours(overtime.toFixed(2));
+      setCategoryCAmount((overtime * 3).toFixed(2));
+      setCategoryAHours("0");
+      setCategoryAAmount("0");
+    }
+  }, [entryTime, exitTime, category]);
+
   // Helper function to determine the next approval status based on current status and user role
   // Commented out as it's not used
   /*
