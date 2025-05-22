@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, ChevronLeft, ChevronRight, Pencil, AlertCircle, Clock, CheckCircle2, Home, Calendar, Shield, BarChart, Trash2, Edit, ThumbsUp, Loader2 } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight, Pencil, AlertCircle, Clock, CheckCircle2, Home, Calendar, Shield, BarChart, Trash2, Edit, ThumbsUp, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns"; // Ensure this import is present
 import { workers, overtime } from "@/lib/api";
 import { Worker, WorkerDetail, WorkerDetailWithApproval, ApprovalStatus } from "@/types";
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { getDisplayRole, getDisplayApprovalStatus } from "@/utils/displayRoles";
 import RoleBadge from "@/components/RoleBadge";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 const WorkerDetails = () => {
   const navigate = useNavigate();
@@ -47,6 +48,8 @@ const WorkerDetails = () => {
   const [approvalEntryId, setApprovalEntryId] = useState<string | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isConfirmingApproval, setIsConfirmingApproval] = useState(false);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -443,7 +446,7 @@ const WorkerDetails = () => {
     }
   };
 
-  // Handle initiating approval process
+  // Handler for initiating approval process
   const handleApproveEntry = (entryId: string) => {
     setApprovalEntryId(entryId);
     setIsApprovalDialogOpen(true);
@@ -523,487 +526,579 @@ const WorkerDetails = () => {
     return false; // No other combinations are allowed
   };
 
+  // Handle approving all entries for the selected worker
+  const handleApproveAllEntries = async () => {
+    if (!selectedWorker) return;
+    
+    try {
+      setIsApproving(true);
+      
+      // Filter for pending entries only
+      const pendingEntries = details.filter(detail => 
+        (detail as WorkerDetailWithApproval).approval_status === "Pending"
+      );
+      
+      if (pendingEntries.length === 0) {
+        toast({
+          title: "No Pending Entries",
+          description: "There are no pending entries to approve.",
+          variant: "default",
+        });
+        setIsApproveDialogOpen(false);
+        return;
+      }
+      
+      await overtime.approveWorker(selectedWorker, selectedMonth, selectedYear);
+      
+      toast({
+        title: "Success",
+        description: `${pendingEntries.length} pending entries have been approved for this worker`,
+      });
+      
+      // Refresh data
+      fetchDetails();
+      setIsApproveDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve entries",
+        variant: "destructive",
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
   return (
-    <div 
-      className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              Staff Details
-            </h1>
-            {user && (
-              <p className="mt-2 text-lg text-gray-600">
-                Hello, {user.name} ({user.staffId})
-                {userRole && <span className="ml-2"><RoleBadge role={userRole} showFullName={true} /></span>}
-              </p>
-            )}
-          </div>
-          <Button variant="outline" onClick={() => navigate("/")}>
-            <LogOut className="mr-2 h-4 w-4" /> Sign Out
-          </Button>
-        </div>
-
-        <Card className="p-6">
-          <div className="flex gap-4 mb-6">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/dashboard" : "/supervisor-dashboard")}
-            >
-              <Home className="mr-2 h-4 w-4" /> Dashboard
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/monthly-summary" : "/supervisor-monthly-summary")}
-            >
-              <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/risk-management" : "/supervisor-risk-management")}
-            >
-              <Shield className="mr-2 h-4 w-4" /> Risk Application
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => navigate(userRole === "Standard" ? "/analytics" : "/supervisor-analytics")}
-            >
-              <BarChart className="mr-2 h-4 w-4" /> Analytics
+    <ErrorBoundary>
+      <div 
+        className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                Staff Details
+              </h1>
+              {user && (
+                <p className="mt-2 text-lg text-gray-600">
+                  Hello, {user.name} ({user.staffId})
+                  {userRole && <span className="ml-2"><RoleBadge role={userRole} showFullName={true} /></span>}
+                </p>
+              )}
+            </div>
+            <Button variant="outline" onClick={() => navigate("/")}>
+              <LogOut className="mr-2 h-4 w-4" /> Sign Out
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-lg font-medium mb-4">Select Staff</h3>
-              <Select
-                value={selectedWorker}
-                onValueChange={setSelectedWorker}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortedWorkersList.map((worker) => (
-                    <SelectItem key={worker.id} value={worker.id}>
-                      {worker.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div>
-              <h3 className="text-lg font-medium mb-4">Select Month</h3>
-              <Select
-                value={selectedMonth.toString()}
-                onValueChange={(value) => setSelectedMonth(parseInt(value))}
+          <Card className="p-6">
+            <div className="flex gap-4 mb-6">
+              <Button
+                variant="ghost"
+                onClick={() => navigate(userRole === "Standard" ? "/dashboard" : "/supervisor-dashboard")}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value.toString()}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-medium mb-4">Select Year</h3>
-              <Select
-                value={selectedYear.toString()}
-                onValueChange={(value) => setSelectedYear(parseInt(value))}
+                <Home className="mr-2 h-4 w-4" /> Dashboard
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate(userRole === "Standard" ? "/monthly-summary" : "/supervisor-monthly-summary")}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate(userRole === "Standard" ? "/risk-management" : "/supervisor-risk-management")}
+              >
+                <Shield className="mr-2 h-4 w-4" /> Risk Application
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate(userRole === "Standard" ? "/analytics" : "/supervisor-analytics")}
+              >
+                <BarChart className="mr-2 h-4 w-4" /> Analytics
+              </Button>
             </div>
-          </div>
-
-          <div className="mt-8">
-            {loading ? (
-              <div className="space-y-4">
-                <div className="flex flex-col space-y-3">
-                  <Skeleton className="h-8 w-64 mb-4" />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                </div>
-                <TableSkeleton rows={6} columns={7} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <h3 className="text-lg font-medium mb-4">Select Staff</h3>
+                <Select
+                  value={selectedWorker}
+                  onValueChange={setSelectedWorker}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortedWorkersList.map((worker) => (
+                      <SelectItem key={worker.id} value={worker.id}>
+                        {worker.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : details.length > 0 ? (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Entry Time
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Exit Time
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category A Hours
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category C Hours
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Transport
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {paginatedDetails.map((detail, index) => (
-                        <tr key={index}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {format(new Date(detail.date), "PP")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {detail.entry_time}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {detail.exit_time}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {detail.category}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {detail.category_a_hours}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {detail.category_c_hours}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {detail.transportation 
-                              ? <span className="font-bold text-green-600">₵{(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}</span>
-                              : 'No'
-                            }
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {getApprovalBadge((detail as WorkerDetailWithApproval).approval_status || "Pending")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex space-x-2">
-                              <Button
-                                variant={canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending") ? "ghost" : "outline"}
-                                onClick={() => handleEditEntry(detail as WorkerDetailWithApproval)}
-                                disabled={!canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending")}
-                                size="sm"
-                                className={canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending") ? "hover:bg-blue-50 hover:text-blue-700" : ""}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                onClick={() => handleDeleteEntry(detail.id)}
-                                disabled={!canDelete(detail as WorkerDetailWithApproval)}
-                                size="sm"
-                                className={canDelete(detail as WorkerDetailWithApproval) ? "text-red-600 hover:bg-red-50 hover:text-red-700" : "text-gray-400 cursor-not-allowed"}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              {canApprove((detail as WorkerDetailWithApproval).approval_status || "Pending") && (
+
+              <div>
+                <h3 className="text-lg font-medium mb-4">Select Month</h3>
+                <Select
+                  value={selectedMonth.toString()}
+                  onValueChange={(value) => setSelectedMonth(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month) => (
+                      <SelectItem key={month.value} value={month.value.toString()}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-4">Select Year</h3>
+                <Select
+                  value={selectedYear.toString()}
+                  onValueChange={(value) => setSelectedYear(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              {loading ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-3">
+                    <Skeleton className="h-8 w-64 mb-4" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </div>
+                  <TableSkeleton rows={6} columns={7} />
+                </div>
+              ) : details.length > 0 ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Entry Time
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Exit Time
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category A Hours
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category C Hours
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Transport
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {paginatedDetails.map((detail, index) => (
+                          <tr key={index}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {format(new Date(detail.date), "PP")}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {detail.entry_time}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {detail.exit_time}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {detail.category}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {detail.category_a_hours}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {detail.category_c_hours}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {detail.transportation 
+                                ? <span className="font-bold text-green-600">₵{(detail.transportation_cost || parseFloat(detail.workers.default_area) || 0).toFixed(2)}</span>
+                                : 'No'
+                              }
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {getApprovalBadge((detail as WorkerDetailWithApproval).approval_status || "Pending")}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant={canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending") ? "ghost" : "outline"}
+                                  onClick={() => handleEditEntry(detail as WorkerDetailWithApproval)}
+                                  disabled={!canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending")}
+                                  size="sm"
+                                  className={canEdit((detail as WorkerDetailWithApproval).approval_status || "Pending") ? "hover:bg-blue-50 hover:text-blue-700" : ""}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
-                                  onClick={() => handleApproveEntry(detail.id)}
+                                  onClick={() => handleDeleteEntry(detail.id)}
+                                  disabled={!canDelete(detail as WorkerDetailWithApproval)}
                                   size="sm"
-                                  className={
-                                    userRole === "Supervisor" || userRole === "RDM" ? "text-blue-600 hover:bg-blue-50 hover:text-blue-700" :
-                                    userRole === "Director" || userRole === "RCM" ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700" :
-                                    "text-green-600 hover:bg-green-50 hover:text-green-700"
-                                  }
+                                  className={canDelete(detail as WorkerDetailWithApproval) ? "text-red-600 hover:bg-red-50 hover:text-red-700" : "text-gray-400 cursor-not-allowed"}
                                 >
-                                  <ThumbsUp className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              )}
-                            </div>
+                                {canApprove((detail as WorkerDetailWithApproval).approval_status || "Pending") && (
+                                  <Button
+                                    variant="ghost"
+                                    onClick={() => handleApproveEntry(detail.id)}
+                                    size="sm"
+                                    className={
+                                      userRole === "Supervisor" || userRole === "RDM" ? "text-blue-600 hover:bg-blue-50 hover:text-blue-700" :
+                                      userRole === "Director" || userRole === "RCM" ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700" :
+                                      "text-green-600 hover:bg-green-50 hover:text-green-700"
+                                    }
+                                  >
+                                    <ThumbsUp className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-gray-50 font-medium">
+                          <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            Totals {isEditingSummary && <span className="text-xs text-blue-600">(Editing)</span>}
                           </td>
-                        </tr>
-                      ))}
-                      <tr className="bg-gray-50 font-medium">
-                        <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          Totals {isEditingSummary && <span className="text-xs text-blue-600">(Editing)</span>}
-                        </td>
-                        {isEditingSummary ? (
-                          <>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="mb-1">{totals.totalCategoryA.toFixed(2)} hrs</div>
-                              <Input
-                                type="number"
-                                value={summaryEditForm.category_a_amount}
-                                onChange={(e) => setSummaryEditForm({...summaryEditForm, category_a_amount: parseFloat(e.target.value) || 0})}
-                                className="w-24 h-8 text-sm"
-                                placeholder="Amount (₵)"
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="mb-1">{totals.totalCategoryC.toFixed(2)} hrs</div>
-                              <Input
-                                type="number"
-                                value={summaryEditForm.category_c_amount}
-                                onChange={(e) => setSummaryEditForm({...summaryEditForm, category_c_amount: parseFloat(e.target.value) || 0})}
-                                className="w-24 h-8 text-sm"
-                                placeholder="Amount (₵)"
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <Input
-                                type="number"
-                                value={summaryEditForm.transportation_cost}
-                                onChange={(e) => setSummaryEditForm({...summaryEditForm, transportation_cost: parseFloat(e.target.value) || 0})}
-                                className="w-24 h-8 text-sm"
-                                placeholder="Transport (₵)"
-                              />
-                            </td>
-                            <td colSpan={2} className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleSaveSummary}
-                                disabled={isSavingSummary}
-                              >
-                                {isSavingSummary ? "Saving..." : "Save"}
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={handleCancelSummaryEdit}
-                                disabled={isSavingSummary}
-                              >
-                                Cancel
-                              </Button>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="text-green-600 font-bold text-base">₵{totals.totalCategoryAAmount.toFixed(2)}</div>
-                              <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryA.toFixed(2)} hrs</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="text-green-600 font-bold text-base">₵{totals.totalCategoryCAmount.toFixed(2)}</div>
-                              <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryC.toFixed(2)} hrs</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="text-green-600 font-bold text-base">₵{totals.totalTransport.toFixed(2)}</div>
-                            </td>
-                            <td colSpan={2} className="px-6 py-4 whitespace-nowrap">
-                              {(userRole === "Standard" || userRole === "Supervisor" || userRole === "Accountant") && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={handleEditSummary}
-                                  disabled={!selectedWorker || details.length === 0}
+                          {isEditingSummary ? (
+                            <>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div className="mb-1">{totals.totalCategoryA.toFixed(2)} hrs</div>
+                                <Input
+                                  type="number"
+                                  value={summaryEditForm.category_a_amount}
+                                  onChange={(e) => setSummaryEditForm({...summaryEditForm, category_a_amount: parseFloat(e.target.value) || 0})}
+                                  className="w-24 h-8 text-sm"
+                                  placeholder="Amount (₵)"
+                                />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div className="mb-1">{totals.totalCategoryC.toFixed(2)} hrs</div>
+                                <Input
+                                  type="number"
+                                  value={summaryEditForm.category_c_amount}
+                                  onChange={(e) => setSummaryEditForm({...summaryEditForm, category_c_amount: parseFloat(e.target.value) || 0})}
+                                  className="w-24 h-8 text-sm"
+                                  placeholder="Amount (₵)"
+                                />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <Input
+                                  type="number"
+                                  value={summaryEditForm.transportation_cost}
+                                  onChange={(e) => setSummaryEditForm({...summaryEditForm, transportation_cost: parseFloat(e.target.value) || 0})}
+                                  className="w-24 h-8 text-sm"
+                                  placeholder="Transport (₵)"
+                                />
+                              </td>
+                              <td colSpan={2} className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={handleSaveSummary}
+                                  disabled={isSavingSummary}
                                 >
-                                  <Edit className="mr-2 h-4 w-4" /> Edit Totals
+                                  {isSavingSummary ? "Saving..." : "Save"}
                                 </Button>
-                              )}
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="mt-4 flex justify-end space-x-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => exportWorkerDetails('transportation')}
-                    disabled={!details.length}
-                  >
-                    Export Transportation
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => exportWorkerDetails('overtime')}
-                    disabled={!details.length}
-                  >
-                    Export Overtime
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-                  <div className="flex flex-1 justify-between sm:hidden">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={handleCancelSummaryEdit}
+                                  disabled={isSavingSummary}
+                                >
+                                  Cancel
+                                </Button>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div className="text-green-600 font-bold text-base">₵{totals.totalCategoryAAmount.toFixed(2)}</div>
+                                <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryA.toFixed(2)} hrs</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div className="text-green-600 font-bold text-base">₵{totals.totalCategoryCAmount.toFixed(2)}</div>
+                                <div className="text-gray-500 text-xs mt-1">{totals.totalCategoryC.toFixed(2)} hrs</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div className="text-green-600 font-bold text-base">₵{totals.totalTransport.toFixed(2)}</div>
+                              </td>
+                              <td colSpan={2} className="px-6 py-4 whitespace-nowrap">
+                                {(userRole === "Standard" || userRole === "Supervisor" || userRole === "Accountant") && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleEditSummary}
+                                    disabled={!selectedWorker || details.length === 0}
+                                  >
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Totals
+                                  </Button>
+                                )}
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-4 flex justify-end space-x-4">
                     <Button
                       variant="outline"
-                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      aria-label="Previous page"
-                      tabIndex={0}
+                      onClick={() => exportWorkerDetails('transportation')}
+                      disabled={!details.length}
                     >
-                      Previous
+                      Export Transportation
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                      aria-label="Next page"
-                      tabIndex={0}
+                      onClick={() => exportWorkerDetails('overtime')}
+                      disabled={!details.length}
                     >
-                      Next
+                      Export Overtime
                     </Button>
                   </div>
-                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{" "}
-                        <span className="font-medium">{Math.min(currentPage * itemsPerPage, details.length)}</span> of{" "}
-                        <span className="font-medium">{details.length}</span> results
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <Select
-                        value={itemsPerPage.toString()}
-                        onValueChange={handleItemsPerPageChange}
+                  <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+                    <div className="flex flex-1 justify-between sm:hidden">
+                      <Button
+                        variant="outline"
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        aria-label="Previous page"
+                        tabIndex={0}
                       >
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Rows per page" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="10">10 per page</SelectItem>
-                          <SelectItem value="25">25 per page</SelectItem>
-                          <SelectItem value="50">50 per page</SelectItem>
-                          <SelectItem value="100">100 per page</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div className="flex">
-                        <Button
-                          variant="outline"
-                          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                          disabled={currentPage === 1}
-                          aria-label="Previous page"
-                          tabIndex={0}
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        aria-label="Next page"
+                        tabIndex={0}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                    <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm text-gray-700">
+                          Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{" "}
+                          <span className="font-medium">{Math.min(currentPage * itemsPerPage, details.length)}</span> of{" "}
+                          <span className="font-medium">{details.length}</span> results
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <Select
+                          value={itemsPerPage.toString()}
+                          onValueChange={handleItemsPerPageChange}
                         >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="px-4 py-2">
-                          Page {currentPage} of {totalPages}
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Rows per page" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10 per page</SelectItem>
+                            <SelectItem value="25">25 per page</SelectItem>
+                            <SelectItem value="50">50 per page</SelectItem>
+                            <SelectItem value="100">100 per page</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="flex">
+                          <Button
+                            variant="outline"
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            aria-label="Previous page"
+                            tabIndex={0}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <div className="px-4 py-2">
+                            Page {currentPage} of {totalPages}
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                            aria-label="Next page"
+                            tabIndex={0}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                          disabled={currentPage === totalPages}
-                          aria-label="Next page"
-                          tabIndex={0}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-4 text-xs text-gray-500">
-                  <p>Keyboard shortcuts: Left arrow (previous page), Right arrow (next page)</p>
-                </div>
-              </>
-            ) : (
-              <p className="text-center text-gray-500 py-8">
-                {selectedWorker
-                  ? "No overtime entries found for the selected period"
-                  : "Select a worker to view details"}
-              </p>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* Edit Entry Dialog */}
-      {selectedEntry && (
-        <WorkerDetailsEdit
-          entry={selectedEntry}
-          isOpen={isEditDialogOpen}
-          onClose={handleCloseEditDialog}
-          onUpdate={handleEntryUpdated}
-          userRole={userRole}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this overtime entry? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteEntry}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Approval Confirmation Dialog */}
-      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Approval</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to approve this overtime entry?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              onClick={confirmApproval} 
-              disabled={isConfirmingApproval}
-              className={
-                userRole === "Supervisor" || userRole === "RDM" ? "bg-blue-600 hover:bg-blue-700" :
-                userRole === "Director" || userRole === "RCM" ? "bg-amber-600 hover:bg-amber-700" :
-                "bg-green-600 hover:bg-green-700"
-              }
-            >
-              {isConfirmingApproval ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  <div className="mt-4 text-xs text-gray-500">
+                    <p>Keyboard shortcuts: Left arrow (previous page), Right arrow (next page)</p>
+                  </div>
                 </>
               ) : (
-                <>
-                  <ThumbsUp className="mr-2 h-4 w-4" />
-                  {(userRole === "Director" || userRole === "RCM") ? "Final Approval" : `Approve as ${getDisplayRole(userRole)}`}
-                </>
+                <p className="text-center text-gray-500 py-8">
+                  {selectedWorker
+                    ? "No overtime entries found for the selected period"
+                    : "Select a worker to view details"}
+                </p>
               )}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsApprovalDialogOpen(false)} 
-              disabled={isConfirmingApproval}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            </div>
+          </Card>
+
+          {/* Add the approve button in the worker selection area */}
+          {selectedWorker && (userRole === "Standard" || userRole === "District_Head") && (
+            <div className="mt-4">
+              <Button
+                variant="standard"
+                onClick={() => setIsApproveDialogOpen(true)}
+                className="gap-2"
+              >
+                <ThumbsUp className="h-5 w-5" />
+                Approve All Entries for {selectedWorker}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Edit Entry Dialog */}
+        {selectedEntry && (
+          <WorkerDetailsEdit
+            entry={selectedEntry}
+            isOpen={isEditDialogOpen}
+            onClose={handleCloseEditDialog}
+            onUpdate={handleEntryUpdated}
+            userRole={userRole}
+          />
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this overtime entry? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={confirmDeleteEntry}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Approval Confirmation Dialog */}
+        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Approval</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to approve this overtime entry?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button 
+                onClick={confirmApproval} 
+                disabled={isConfirmingApproval}
+                className={
+                  userRole === "Supervisor" || userRole === "RDM" ? "bg-blue-600 hover:bg-blue-700" :
+                  userRole === "Director" || userRole === "RCM" ? "bg-amber-600 hover:bg-amber-700" :
+                  "bg-green-600 hover:bg-green-700"
+                }
+              >
+                {isConfirmingApproval ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    {(userRole === "Director" || userRole === "RCM") ? "Final Approval" : `Approve as ${getDisplayRole(userRole)}`}
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsApprovalDialogOpen(false)} 
+                disabled={isConfirmingApproval}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add the approval confirmation dialog */}
+        <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-amber-600">
+                <AlertTriangle className="h-5 w-5" />
+                Confirm Approval
+              </DialogTitle>
+              <DialogDescription>
+                You are about to approve all entries for {selectedWorker} for {months.find(m => m.value === selectedMonth)?.label} {selectedYear}.
+                This action cannot be undone. Are you sure you want to proceed?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsApproveDialogOpen(false)}
+                disabled={isApproving}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="standard"
+                onClick={handleApproveAllEntries}
+                disabled={isApproving}
+                className="gap-2"
+              >
+                {isApproving ? "Approving..." : "Confirm Approval"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ErrorBoundary>
   );
 };
 

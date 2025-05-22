@@ -574,22 +574,6 @@ const MonthlySummary = () => {
                               </>
                             ) : (
                               <>
-                                {userRole === "Standard" && (
-                                  <Button
-                                    variant="standard"
-                                    size="sm"
-                                    onClick={() => handleEditWorker(summary.worker_id, summary)}
-                                    disabled={
-                                      editingWorkerId !== null || 
-                                      !summary.approval_statuses?.includes("Pending") ||
-                                      summary.approval_statuses?.includes("Standard") ||
-                                      summary.approval_statuses?.includes("Approved")
-                                    }
-                                  >
-                                    <Edit className="h-4 w-4 mr-1" /> Initial Review
-                                  </Button>
-                                )}
-                                
                                 {userRole === "Supervisor" && (
                                   <Button
                                     variant="supervisor"
