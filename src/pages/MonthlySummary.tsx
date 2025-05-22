@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { LogOut, Download, Shield, CheckCircle2, AlertCircle, Clock, Edit, ThumbsUp, Users } from "lucide-react";
+import { LogOut, Download, Shield, CheckCircle2, AlertCircle, Clock, ThumbsUp, Users } from "lucide-react";
 import { overtime } from "@/lib/api";
 import { WorkerSummary, ApprovalStatus } from "@/types";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
@@ -153,33 +153,6 @@ const MonthlySummary = () => {
     return <Badge variant="outline" className="flex items-center gap-1 text-xs py-1"><Clock className="h-3.5 w-3.5" /> Pending</Badge>;
   };
 
-  // Handle entering edit mode for a worker
-  const handleEditWorker = (workerId: string, currentSummary: any) => {
-    // Make sure it can only be edited if it's at the right stage for the user's role
-    if (userRole === "Standard" && currentSummary.approval_statuses?.includes("Pending")) {
-      setEditingWorkerId(workerId);
-      setEditForm({
-        category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
-        category_c_amount: currentSummary.category_c_amount || currentSummary.category_c_hours * 3,
-        transportation_cost: currentSummary.transportation_cost || 0
-      });
-    } else if ((userRole === "Supervisor" || userRole === "RDM") && currentSummary.approval_statuses?.includes("Standard")) {
-      setEditingWorkerId(workerId);
-      setEditForm({
-        category_a_amount: currentSummary.category_a_amount || currentSummary.category_a_hours * 2,
-        category_c_amount: currentSummary.category_c_amount || currentSummary.category_c_hours * 3,
-        transportation_cost: currentSummary.transportation_cost || 0
-      });
-    } else {
-      // Wrong status for this user role
-      toast({
-        title: "Cannot Edit",
-        description: "You can only edit entries at your approval level",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Handle canceling edit mode
   const handleCancelEdit = () => {
     setEditingWorkerId(null);
@@ -188,30 +161,6 @@ const MonthlySummary = () => {
       category_c_amount: 0,
       transportation_cost: 0
     });
-  };
-
-  // Handle saving edited amounts
-  const handleSaveAmounts = async () => {
-    try {
-      // In a real implementation, this would need to update all entries for this worker
-      // For this example, we'll just show a toast
-      toast({
-        title: "Success",
-        description: "Amounts updated successfully",
-      });
-      
-      // Reset edit state
-      handleCancelEdit();
-      
-      // Refresh data
-      fetchSummary();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update amounts",
-        variant: "destructive",
-      });
-    }
   };
 
   // Handle mass approval (for directors)
