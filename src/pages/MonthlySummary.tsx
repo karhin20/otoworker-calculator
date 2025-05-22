@@ -23,12 +23,6 @@ const MonthlySummary = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ name: string; staffId: string; grade: string; role?: string } | null>(null);
   const [userRole, setUserRole] = useState<string>("Standard");
-  const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({
-    category_a_amount: 0,
-    category_c_amount: 0,
-    transportation_cost: 0
-  });
   const [approvalFilter, setApprovalFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -151,16 +145,6 @@ const MonthlySummary = () => {
     
     // Default to pending
     return <Badge variant="outline" className="flex items-center gap-1 text-xs py-1"><Clock className="h-3.5 w-3.5" /> Pending</Badge>;
-  };
-
-  // Handle canceling edit mode
-  const handleCancelEdit = () => {
-    setEditingWorkerId(null);
-    setEditForm({
-      category_a_amount: 0,
-      category_c_amount: 0,
-      transportation_cost: 0
-    });
   };
 
   // Handle mass approval (for directors)
@@ -455,51 +439,18 @@ const MonthlySummary = () => {
                           {summary.grade}
                         </div>
                         
-                        {editingWorkerId === summary.worker_id && userRole === "Accountant" ? (
-                          // Edit mode for amount fields
-                          <>
-                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                              <Input
-                                type="number"
-                                value={editForm.category_a_amount}
-                                onChange={(e) => setEditForm({...editForm, category_a_amount: parseFloat(e.target.value) || 0})}
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                              <Input
-                                type="number"
-                                value={editForm.category_c_amount}
-                                onChange={(e) => setEditForm({...editForm, category_c_amount: parseFloat(e.target.value) || 0})}
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                              <Input
-                                type="number"
-                                value={editForm.transportation_cost}
-                                onChange={(e) => setEditForm({...editForm, transportation_cost: parseFloat(e.target.value) || 0})}
-                                className="w-full"
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          // Display mode
-                          <>
-                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                              <div className="font-semibold text-gray-700">{summary.category_a_hours.toFixed(2)} hrs</div>
-                              <div className="text-blue-600 mt-1">₵{summary.category_a_amount?.toFixed(2) ?? (summary.category_a_hours * 2).toFixed(2)}</div>
-                            </div>
-                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                              <div className="font-semibold text-gray-700">{summary.category_c_hours.toFixed(2)} hrs</div>
-                              <div className="text-blue-600 mt-1">₵{summary.category_c_amount?.toFixed(2) ?? (summary.category_c_hours * 3).toFixed(2)}</div>
-                            </div>
-                            <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                              <div className="font-semibold text-gray-700">{summary.transportation_days || 0} days</div>
-                              <div className="text-blue-600 mt-1">₵{summary.transportation_cost?.toFixed(2) ?? "0.00"}</div>
-                            </div>
-                          </>
-                        )}
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                          <div className="font-semibold text-gray-700">{summary.category_a_hours.toFixed(2)} hrs</div>
+                          <div className="text-blue-600 mt-1">₵{summary.category_a_amount?.toFixed(2) ?? (summary.category_a_hours * 2).toFixed(2)}</div>
+                        </div>
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                          <div className="font-semibold text-gray-700">{summary.category_c_hours.toFixed(2)} hrs</div>
+                          <div className="text-blue-600 mt-1">₵{summary.category_c_amount?.toFixed(2) ?? (summary.category_c_hours * 3).toFixed(2)}</div>
+                        </div>
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                          <div className="font-semibold text-gray-700">{summary.transportation_days || 0} days</div>
+                          <div className="text-blue-600 mt-1">₵{summary.transportation_cost?.toFixed(2) ?? "0.00"}</div>
+                        </div>
                         
                         <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
                           {getApprovalBadge(summary.approval_statuses || ["Pending"])}
