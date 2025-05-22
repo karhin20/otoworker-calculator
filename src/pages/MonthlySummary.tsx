@@ -466,7 +466,7 @@ const MonthlySummary = () => {
               <div className="mt-8">
                 <div className="overflow-x-auto shadow-lg ring-1 ring-black ring-opacity-5 rounded-lg border border-gray-200 max-w-full">
                   {/* Table header */}
-                  <div className="bg-gray-100 grid grid-cols-8 divide-x divide-gray-200 font-semibold">
+                  <div className="bg-gray-100 grid grid-cols-7 divide-x divide-gray-200 font-semibold">
                     <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
                       Name
                     </div>
@@ -488,17 +488,12 @@ const MonthlySummary = () => {
                     <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
                       Status
                     </div>
-                    {(userRole === "Accountant" || userRole === "Director") && (
-                      <div className="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider col-span-1">
-                        Actions
-                      </div>
-                    )}
                   </div>
                   
                   {/* Table body */}
                   <div className="bg-white divide-y divide-gray-200">
                     {finalFilteredSummaries.map((summary) => (
-                      <div key={summary.worker_id} className="grid grid-cols-8 divide-x divide-gray-200 hover:bg-gray-50 transition-colors">
+                      <div key={summary.worker_id} className="grid grid-cols-7 divide-x divide-gray-200 hover:bg-gray-50 transition-colors">
                         <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-span-1">
                           <div className="truncate max-w-[150px]" title={summary.name}>
                             {summary.name}
@@ -560,71 +555,12 @@ const MonthlySummary = () => {
                         <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
                           {getApprovalBadge(summary.approval_statuses || ["Pending"])}
                         </div>
-                        
-                        {(userRole === "Standard" || userRole === "District_Head" || userRole === "Supervisor" || userRole === "RDM" || userRole === "Accountant" || userRole === "Director" || userRole === "RCM") && (
-                          <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1 flex gap-2">
-                            {editingWorkerId === summary.worker_id ? (
-                              <>
-                                <Button variant="approve" size="sm" onClick={handleSaveAmounts}>
-                                  Save
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
-                                  Cancel
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                {userRole === "Supervisor" && (
-                                  <Button
-                                    variant="supervisor"
-                                    size="sm"
-                                    onClick={() => handleEditWorker(summary.worker_id, summary)}
-                                    disabled={
-                                      editingWorkerId !== null || 
-                                      !summary.approval_statuses?.includes("Standard") ||
-                                      summary.approval_statuses?.includes("Supervisor") ||
-                                      summary.approval_statuses?.includes("Approved")
-                                    }
-                                  >
-                                    <Edit className="h-4 w-4 mr-1" /> Supervisor Review
-                                  </Button>
-                                )}
-                                
-                                {userRole === "Accountant" && (
-                                  <Button
-                                    variant="accountant"
-                                    size="sm"
-                                    onClick={() => handleEditWorker(summary.worker_id, summary)}
-                                    disabled={
-                                      editingWorkerId !== null || 
-                                      !summary.approval_statuses?.includes("Supervisor") ||
-                                      summary.approval_statuses?.includes("Accountant") ||
-                                      summary.approval_statuses?.includes("Approved")
-                                    }
-                                  >
-                                    <Edit className="h-4 w-4 mr-1" /> Edit Amounts
-                                  </Button>
-                                )}
-                                
-                                {userRole === "Director" && summary.approval_statuses?.includes("Supervisor") && (
-                                  <Button
-                                    variant="director"
-                                    size="sm"
-                                    onClick={() => navigate(`/worker-details?id=${summary.worker_id}`)}
-                                  >
-                                    <Users className="h-4 w-4 mr-1" /> View Details
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
                   
                   {/* Totals row */}
-                  <div className="bg-gray-100 grid grid-cols-8 divide-x divide-gray-200 font-medium">
+                  <div className="bg-gray-100 grid grid-cols-7 divide-x divide-gray-200 font-medium">
                     <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 col-span-3">
                             Monthly Totals
                     </div>
@@ -642,9 +578,6 @@ const MonthlySummary = () => {
                       <div className="font-bold text-base text-blue-600">₵{totals.totalTransport.toFixed(2)}</div>
                     </div>
                     <div className="px-6 py-4 whitespace-nowrap col-span-1"></div>
-                    {(userRole === "Accountant" || userRole === "Director") && (
-                      <div className="px-6 py-4 whitespace-nowrap col-span-1"></div>
-                    )}
                   </div>
                 </div>
               </div>
