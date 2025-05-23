@@ -501,7 +501,7 @@ const RiskManagement = () => {
                   Hello, {user.name} ({user.staffId})
                   {user.role && (
                     <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {user.role === 'Standard' ? 'District Head' : user.role} Role
+                      {user.role === 'Standard' ? 'District Head' : user.role}
                     </span>
                   )}
                 </p>
@@ -919,7 +919,7 @@ const RiskManagement = () => {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size/Depth</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₵)</th>
-              {(user?.role === 'Admin' || user?.role === 'District_Head') && (
+              {(user?.role === 'Standard' || user?.role === 'RDM') && (
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               )}
             </tr>
@@ -933,7 +933,7 @@ const RiskManagement = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.size_depth}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.remarks}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.rate?.toFixed(2) || "10.00"}</td>
-                {(user?.role === 'Admin' || user?.role === 'District_Head') && (
+                {(user?.role === 'Standard' || user?.role === 'RDM') && (
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => handleEditEntry(entry)}>
                       <Pencil className="w-4 h-4 mr-1" /> Edit
