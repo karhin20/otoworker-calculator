@@ -499,9 +499,11 @@ const RiskManagement = () => {
               {user && (
                 <p className="mt-2 text-lg text-gray-600">
                   Hello, {user.name} ({user.staffId})
-                  {user.role && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {user.role} Role
-                  </span>}
+                  {user.role && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {user.role === 'Standard' ? 'District Head' : user.role} Role
+                    </span>
+                  )}
                 </p>
               )}
             </div>
