@@ -873,6 +873,18 @@ const WorkerDetails = () => {
                     </tbody>
                   </table>
                 </div>
+                {(userRole === "Standard" || userRole === "District_Head") && (
+                  <div className="mt-4 flex justify-start">
+                    <Button
+                      variant="standard"
+                      onClick={handleApproveAllPending}
+                      disabled={!selectedWorker || details.filter((d) => (d as any).approval_status === "Pending").length === 0}
+                      className="gap-1"
+                    >
+                      <ThumbsUp className="h-5 w-5" /> Approve All Pending
+                    </Button>
+                  </div>
+                )}
                 <div className="mt-4 flex justify-end space-x-4">
                   <Button
                     variant="outline"
@@ -961,20 +973,6 @@ const WorkerDetails = () => {
                 </div>
                 <div className="mt-4 text-xs text-gray-500">
                   <p>Keyboard shortcuts: Left arrow (previous page), Right arrow (next page)</p>
-                </div>
-                <div className="mt-8 flex gap-4 items-center">
-                  {/* Approve All Button for Standard/District_Head */}
-                  {(userRole === "Standard" || userRole === "District_Head") && (
-                    <Button
-                      variant="standard"
-                      onClick={handleApproveAllPending}
-                      disabled={!selectedWorker || details.filter((d) => (d as any).approval_status === "Pending").length === 0}
-                      className="gap-1"
-                    >
-                      <ThumbsUp className="h-5 w-5" /> Approve All Pending
-                    </Button>
-                  )}
-                  {/* ...existing export buttons and other controls... */}
                 </div>
               </>
             ) : (
