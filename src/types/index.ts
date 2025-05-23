@@ -125,6 +125,17 @@ export interface RiskEntry {
     staff_id: string;
     grade: string;
   };
+  approval_status?: ApprovalStatus;
+  approved_by?: string;
+  approved_by_name?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  rejected_by?: string;
+  rejected_by_name?: string;
+  rejected_at?: string;
+  last_edited_by?: string;
+  last_edited_by_name?: string;
+  last_edited_at?: string;
 }
 
 export interface RiskSummary {

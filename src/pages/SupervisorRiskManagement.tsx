@@ -206,7 +206,7 @@ const SupervisorRiskManagement = () => {
   const handleRejectEntry = async (entryId: string) => {
     setIsRejecting(true);
     try {
-      await risk.reject(entryId);
+      await risk.reject(entryId, "Rejected by supervisor");
       toast({
         title: "Rejected",
         description: "Risk entry has been rejected",

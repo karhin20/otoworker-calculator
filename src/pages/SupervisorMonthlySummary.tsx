@@ -613,76 +613,76 @@ const SupervisorMonthlySummary = () => {
                         ? summaryItem.entries.every(e => e.approval_status === "Standard")
                         : false;
                       return (
-                        <div key={summaryItem.worker_id} className="grid grid-cols-8 divide-x divide-gray-200 hover:bg-gray-50 transition-colors">
-                          {/* Worker Info */}
-                          <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-span-1">
-                            <div className="truncate max-w-[150px]" title={summaryItem.name}>
-                              {summaryItem.name}
-                            </div>
+                      <div key={summaryItem.worker_id} className="grid grid-cols-8 divide-x divide-gray-200 hover:bg-gray-50 transition-colors">
+                        {/* Worker Info */}
+                        <div className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-span-1">
+                          <div className="truncate max-w-[150px]" title={summaryItem.name}>
+                            {summaryItem.name}
                           </div>
-                          <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">{summaryItem.staff_id}</div>
-                          <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">{summaryItem.grade}</div>
+                        </div>
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">{summaryItem.staff_id}</div>
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">{summaryItem.grade}</div>
 
-                           {/* Amounts - Editable by Supervisor and Accountant */}
+                         {/* Amounts - Editable by Supervisor and Accountant */}
                            {editingWorkerId === summaryItem.worker_id && (userRole === "Accountant" || userRole === "Supervisor" || userRole === "RDM") ? (
-                             <>
-                               <div className="px-2 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                                 <div className="mb-1 text-xs font-semibold text-gray-700">Hours: {summaryItem.category_a_hours.toFixed(2)}</div>
-                                 <Input
-                                   type="number"
-                                   value={editForm.category_a_amount}
-                                   onChange={(e) => setEditForm({...editForm, category_a_amount: parseFloat(e.target.value) || 0})}
-                                   className="h-8 text-sm"
-                                   placeholder="Amount (₵)"
-                                 />
-                               </div>
-                               <div className="px-2 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                                 <div className="mb-1 text-xs font-semibold text-gray-700">Hours: {summaryItem.category_c_hours.toFixed(2)}</div>
-                                 <Input
-                                   type="number"
-                                   value={editForm.category_c_amount}
-                                   onChange={(e) => setEditForm({...editForm, category_c_amount: parseFloat(e.target.value) || 0})}
-                                   className="h-8 text-sm"
-                                   placeholder="Amount (₵)"
-                                 />
-                               </div>
-                               <div className="px-2 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1">
-                                 <Input
-                                   type="number"
-                                   value={editForm.transportation_cost}
-                                   onChange={(e) => setEditForm({...editForm, transportation_cost: parseFloat(e.target.value) || 0})}
-                                   className="h-8 text-sm"
-                                   placeholder="Amount (₵)"
-                                 />
-                               </div>
-                             </>
-                           ) : (
-                             <>
-                               <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                           <>
+                             <div className="px-2 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                               <div className="mb-1 text-xs font-semibold text-gray-700">Hours: {summaryItem.category_a_hours.toFixed(2)}</div>
+                               <Input
+                                 type="number"
+                                 value={editForm.category_a_amount}
+                                 onChange={(e) => setEditForm({...editForm, category_a_amount: parseFloat(e.target.value) || 0})}
+                                 className="h-8 text-sm"
+                                 placeholder="Amount (₵)"
+                               />
+                             </div>
+                             <div className="px-2 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                               <div className="mb-1 text-xs font-semibold text-gray-700">Hours: {summaryItem.category_c_hours.toFixed(2)}</div>
+                               <Input
+                                 type="number"
+                                 value={editForm.category_c_amount}
+                                 onChange={(e) => setEditForm({...editForm, category_c_amount: parseFloat(e.target.value) || 0})}
+                                 className="h-8 text-sm"
+                                 placeholder="Amount (₵)"
+                               />
+                             </div>
+                             <div className="px-2 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                               <Input
+                                 type="number"
+                                 value={editForm.transportation_cost}
+                                 onChange={(e) => setEditForm({...editForm, transportation_cost: parseFloat(e.target.value) || 0})}
+                                 className="h-8 text-sm"
+                                 placeholder="Amount (₵)"
+                               />
+                             </div>
+                           </>
+                         ) : (
+                           <>
+                             <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
                                  <div className="text-green-600 font-bold text-base">₵{summaryItem.category_a_amount?.toFixed(2) ?? '0.00'}</div>
                                  <div className="text-gray-500 text-xs mt-1">{summaryItem.category_a_hours.toFixed(2)} hrs</div>
-                               </div>
-                               <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                             </div>
+                             <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
                                  <div className="text-green-600 font-bold text-base">₵{summaryItem.category_c_amount?.toFixed(2) ?? '0.00'}</div>
                                  <div className="text-gray-500 text-xs mt-1">{summaryItem.category_c_hours.toFixed(2)} hrs</div>
-                               </div>
-                               <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                             </div>
+                             <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
                                  <div className="text-green-600 font-bold text-base">₵{summaryItem.transportation_cost?.toFixed(2) ?? '0.00'}</div>
                                  <div className="text-gray-500 text-xs mt-1">{summaryItem.transportation_days || 0} days</div>
-                               </div>
-                             </>
-                           )}
+                             </div>
+                           </>
+                         )}
 
 
-                          {/* Status Badge */}
-                          <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
+                        {/* Status Badge */}
+                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 col-span-1">
                               {getApprovalBadge(summaryItem as WorkerSummary)}
-                          </div>
+                        </div>
 
-                           {/* Action Buttons */}
-                           <div className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1 flex gap-1 items-center">
-                             {editingWorkerId === summaryItem.worker_id ? (
-                               <>
+                         {/* Action Buttons */}
+                         <div className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 col-span-1 flex gap-1 items-center">
+                           {editingWorkerId === summaryItem.worker_id ? (
+                             <>
                                  <Button 
                                   variant="approve" 
                                   size="sm" 
@@ -693,15 +693,15 @@ const SupervisorMonthlySummary = () => {
                                    Save
                                  </Button>
                                  <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={loading}>Cancel</Button>
-                               </>
-                             ) : (
-                               <>
+                             </>
+                           ) : (
+                             <>
                                   {/* Edit button for Supervisor/RDM and Accountant */}
                                   {(userRole === "Supervisor" || userRole === "RDM" || userRole === "Accountant") && (
-                                     <Button
+                                   <Button
                                        variant="outline"
-                                       size="sm"
-                                       onClick={() => handleEditWorker(summaryItem.worker_id, summaryItem as any)}
+                                     size="sm"
+                                     onClick={() => handleEditWorker(summaryItem.worker_id, summaryItem as any)}
                                        disabled={
                                          loading ||
                                          editingWorkerId !== null ||
@@ -711,10 +711,10 @@ const SupervisorMonthlySummary = () => {
                                          (userRole === "Supervisor" && !((summaryItem as any).approval_statuses?.includes("Standard") || (summaryItem as any).approval_statuses?.includes("Pending")))
                                        }
                                        title={`Edit amounts (${getDisplayApprovalStatus(userRole)})`}
-                                     >
-                                       <Edit className="h-4 w-4" />
-                                     </Button>
-                                  )}
+                                   >
+                                     <Edit className="h-4 w-4" />
+                                   </Button>
+                                )}
                                   
                                   {/* Approve button for Supervisor/RDM */}
                                   {(userRole === "Supervisor" || userRole === "RDM") && (
@@ -738,21 +738,21 @@ const SupervisorMonthlySummary = () => {
                                   
                                   {/* View Details button for Director/RCM at Supervisor stage */}
                                   {(userRole === "Director" || userRole === "RCM") && (
-                                      <Button
-                                          variant="director"
-                                          size="sm"
+                                    <Button
+                                        variant="director"
+                                        size="sm"
                                           onClick={() => navigate(`/worker-details-supervisor?id=${summaryItem.worker_id}`)} // Navigate to supervisor worker details with ID
                                           disabled={!(summaryItem as any).approval_statuses?.includes("Supervisor")}
-                                          title="View details for final approval"
-                                      >
-                                          <Users className="h-4 w-4" />
-                                      </Button>
-                                  )}
-                               </>
-                             )}
-                           </div>
+                                        title="View details for final approval"
+                                    >
+                                        <Users className="h-4 w-4" />
+                                    </Button>
+                                )}
+                             </>
+                           )}
+                         </div>
 
-                        </div>
+                      </div>
                       );
                     })}
                   </div>

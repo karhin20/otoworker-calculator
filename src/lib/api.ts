@@ -709,11 +709,12 @@ export const risk = {
   },
   
   // Reject a risk entry (for supervisors and above)
-  reject: (entryId: string) => {
+  reject: (entryId: string, reason: string) => {
     // Clear cache when rejecting an entry
     clearCache('risk/');
     return apiCall(`/risk/${entryId}/reject`, {
       method: "PUT",
+      body: { reason },
     });
   },
   

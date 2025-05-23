@@ -52,4 +52,46 @@ SELECT
 FROM overtime_entries
 GROUP BY worker_id, EXTRACT(MONTH FROM date), EXTRACT(YEAR FROM date);
 
+-- Add last_edited_at column to risk_entries table
+ALTER TABLE risk_entries ADD COLUMN IF NOT EXISTS last_edited_at TIMESTAMP WITH TIME ZONE;
+
+-- Add approval columns to risk_entries table
+ALTER TABLE risk_entries ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'Pending';
+ALTER TABLE risk_entries ADD COLUMN IF NOT EXISTS approved_by TEXT;
+ALTER TABLE risk_entries ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+
+-- Add RLS policies for approval
+-- Allow read access to all authenticated users (adjust as needed)
+DROP POLICY IF EXISTS "Allow authenticated users to view risk entries" ON risk_entries;
+CREATE POLICY "Allow authenticated users to view risk entries" ON risk_entries FOR SELECT TO authenticated USING (true);
+
+-- Allow inserts by authenticated users
+DROP POLICY IF EXISTS "Allow authenticated users to insert risk entries" ON risk_entries;
+CREATE POLICY "Allow authenticated users to insert risk entries" ON risk_entries FOR INSERT TO authenticated WITH CHECK (true);
+
+-- Allow updates by authenticated users based on their role and approval status
+DROP POLICY IF EXISTS "Allow standard/district head to update pending risk entries" ON risk_entries;
+CREATE POLICY "Allow standard/district head to update pending risk entries" ON risk_entries FOR UPDATE TO authenticated USING (auth.uid() IN ( SELECT id FROM users WHERE role = 'Standard' OR role = 'District_Head' )) WITH CHECK (approval_status = 'Pending');
+
+DROP POLICY IF EXISTS "Allow supervisor/rdm to update standard approved risk entries" ON risk_entries;
+CREATE POLICY "Allow supervisor/rdm to update standard approved risk entries" ON risk_entries FOR UPDATE TO authenticated USING (auth.uid() IN ( SELECT id FROM users WHERE role = 'Supervisor' OR role = 'RDM' )) WITH CHECK (approval_status = 'Standard');
+
+-- Add policies for approving/rejecting based on role and current status
+DROP POLICY IF EXISTS "Allow district head to approve pending risk entries" ON risk_entries;
+CREATE POLICY "Allow district head to approve pending risk entries" ON risk_entries FOR UPDATE TO authenticated USING (auth.uid() IN ( SELECT id FROM users WHERE role = 'Standard' OR role = 'District_Head' ) AND approval_status = 'Pending') WITH CHECK (approval_status = 'Standard');
+
+DROP POLICY IF EXISTS "Allow supervisor/rdm to approve standard risk entries" ON risk_entries;
+CREATE POLICY "Allow supervisor/rdm to approve standard risk entries" ON risk_entries FOR UPDATE TO authenticated USING (auth.uid() IN ( SELECT id FROM users WHERE role = 'Supervisor' OR role = 'RDM' ) AND approval_status = 'Standard') WITH CHECK (approval_status = 'Supervisor');
+
+DROP POLICY IF EXISTS "Allow director/rcm to approve supervisor risk entries" ON risk_entries;
+CREATE POLICY "Allow director/rcm to approve supervisor risk entries" ON risk_entries FOR UPDATE TO authenticated USING (auth.uid() IN ( SELECT id FROM users WHERE role = 'Director' OR role = 'RCM' ) AND approval_status = 'Supervisor') WITH CHECK (approval_status = 'Approved');
+
+-- Add policy for rejecting by authorized roles (Standard/District Head, Supervisor/RDM, Director/RCM)
+DROP POLICY IF EXISTS "Allow authorized roles to reject risk entries" ON risk_entries;
+CREATE POLICY "Allow authorized roles to reject risk entries" ON risk_entries FOR UPDATE TO authenticated USING (auth.uid() IN ( SELECT id FROM users WHERE role IN ('Standard', 'District_Head', 'Supervisor', 'RDM', 'Director', 'RCM') ) AND approval_status != 'Rejected') WITH CHECK (approval_status = 'Rejected');
+
+-- Allow deletes by authenticated users based on their role and approval status (e.g., only pending or rejected for Standard/District Head)
+DROP POLICY IF EXISTS "Allow standard/district head to delete pending or rejected risk entries" ON risk_entries;
+CREATE POLICY "Allow standard/district head to delete pending or rejected risk entries" ON risk_entries FOR DELETE TO authenticated USING (auth.uid() IN ( SELECT id FROM users WHERE role = 'Standard' OR role = 'District_Head' ) AND (approval_status = 'Pending' OR approval_status = 'Rejected'));
+
 -- Run this script in your database SQL editor to add the approval system. 

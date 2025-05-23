@@ -9,16 +9,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { LogOut, Download, Calendar as CalendarIcon, Home, BarChart, Users, FileText, Pencil, Trash2 } from "lucide-react";
+import { LogOut, Download, Calendar as CalendarIcon, Home, BarChart, Users, FileText, Pencil, Trash2, ThumbsUp, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { workers as workersApi, risk } from "@/lib/api";
-import { Worker, RiskEntry } from "@/types";
+import { Worker, RiskEntry, ApprovalStatus, AdminRole } from "@/types";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { getApprovalBadge } from "@/utils/displayRoles"; // Import helper for approval status badge
 
 const RiskManagement = () => {
   const navigate = useNavigate();
@@ -54,6 +55,12 @@ const RiskManagement = () => {
     remarks: "",
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const [approvalEntryId, setApprovalEntryId] = useState<string | null>(null);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [rejectionEntryId, setRejectionEntryId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
 
   // Generate month options
   const months = [
@@ -487,6 +494,109 @@ const RiskManagement = () => {
     setDeletingEntryId(null);
   };
 
+  // Handler for initiating approval process
+  const handleApproveEntry = (entryId: string) => {
+    setApprovalEntryId(entryId);
+    setIsApprovalDialogOpen(true);
+  };
+
+  // Handle confirming approval
+  const confirmApproval = async () => {
+    if (!approvalEntryId) return;
+
+    try {
+      setLoading(true); // Start loading indicator
+
+      await risk.approve(approvalEntryId);
+
+      toast({
+        title: "Success",
+        description: "Risk entry approved successfully.",
+      });
+
+      // Reset state and refresh
+      setApprovalEntryId(null);
+      setIsApprovalDialogOpen(false);
+      // Refresh data
+      const data = await risk.getMonthly(selectedMonth, selectedYear);
+      setEntries(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve risk entry",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false); // Stop loading indicator regardless of outcome
+    }
+  };
+
+  // Handler for initiating rejection process
+  const handleRejectEntry = (entryId: string) => {
+    setRejectionEntryId(entryId);
+    setIsRejectionDialogOpen(true);
+    setRejectionReason(""); // Clear previous reason
+  };
+
+  // Handle confirming rejection
+  const confirmRejection = async () => {
+    if (!rejectionEntryId) return;
+
+    try {
+      setLoading(true); // Start loading indicator
+
+      await risk.reject(rejectionEntryId, rejectionReason);
+
+      toast({
+        title: "Success",
+        description: "Risk entry rejected successfully.",
+      });
+
+      // Reset state and refresh
+      setRejectionEntryId(null);
+      setIsRejectionDialogOpen(false);
+      setRejectionReason(""); // Clear reason
+      // Refresh data
+      const data = await risk.getMonthly(selectedMonth, selectedYear);
+      setEntries(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject risk entry",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false); // Stop loading indicator regardless of outcome
+    }
+  };
+
+  // Can user approve this entry?
+  const canApprove = (status: ApprovalStatus | undefined): boolean => {
+    if (!user?.role || !status) return false;
+    // Follow hierarchical approval flow
+    if ((user.role as AdminRole | undefined) === "Standard" && status === "Pending") return true;
+    if ((user.role as AdminRole | undefined) === "District_Head" && status === "Pending") return true;
+
+    if ((user.role as AdminRole | undefined) === "Supervisor" && status === "Standard") return true;
+    if ((user.role as AdminRole | undefined) === "RDM" && status === "Standard") return true;
+
+    if ((user.role as AdminRole | undefined) === "Director" && status === "Supervisor") return true;
+    if ((user.role as AdminRole | undefined) === "RCM" && status === "Supervisor") return true;
+
+    return false; // No other combinations are allowed
+  };
+
+  // Can user reject this entry?
+  const canReject = (status: ApprovalStatus | undefined): boolean => {
+     if (!user?.role || !status) return false;
+     // Any authorized role can reject entries that are not already rejected
+     const authorizedRoles: (AdminRole | undefined)[] = ['Standard', 'District_Head', 'Supervisor', 'RDM', 'Accountant', 'Director', 'RCM'];
+     if (authorizedRoles.includes(user.role as AdminRole | undefined) && status !== 'Rejected') {
+       return true;
+     }
+     return false;
+  };
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -541,243 +651,239 @@ const RiskManagement = () => {
             </nav>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Risk Management Form */}
-            <Card className="p-6 bg-white shadow-sm col-span-1">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                Add Risk Management Entry
-              </h2>
+          <Card className="p-6 bg-white shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+              Add Risk Management Entry
+            </h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="worker">Worker</Label>
+                <Select
+                  value={formData.worker_id}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, worker_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select worker" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workers.map((worker) => (
+                      <SelectItem key={worker.id} value={worker.id}>
+                        {worker.name} ({worker.staff_id})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="worker">Worker</Label>
-                  <Select
-                    value={formData.worker_id}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, worker_id: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select worker" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {workers.map((worker) => (
-                        <SelectItem key={worker.id} value={worker.id}>
-                          {worker.name} ({worker.staff_id})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Date</Label>
-                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.date && "text-muted-foreground"
-                        )}
-                        onClick={() => setIsCalendarOpen(true)}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.date}
-                        onSelect={handleDateChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="Enter location"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="size_depth">Size/Depth</Label>
-                  <Select
-                    value={formData.size_depth}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, size_depth: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select size/depth" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sizeOptions.map((size) => (
-                        <SelectItem key={size} value={size}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="remarks">Remarks</Label>
-                  <Textarea
-                    id="remarks"
-                    value={formData.remarks}
-                    onChange={(e) => setFormData(prev => ({ ...prev, remarks: e.target.value }))}
-                    placeholder="Enter any additional remarks"
-                    className="min-h-[100px]"
-                  />
-                </div>
-                
-                <Button type="submit" disabled={submitting} className="w-full">
-                  {submitting ? "Adding Entry..." : "Add Entry"}
-                </Button>
-              </form>
-            </Card>
-
-            {/* Risk Entries Tabs */}
-            <Card className="p-6 bg-white shadow-sm col-span-1 lg:col-span-2">
-              <Tabs defaultValue="all-entries" className="mb-6" onValueChange={setActiveTab}>
-                <TabsList>
-                  <TabsTrigger value="all-entries">All Entries</TabsTrigger>
-                  <TabsTrigger value="worker-details">Worker Details</TabsTrigger>
-                </TabsList>
-                <TabsContent value="all-entries">
-                  <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      Risk Management Entries
-                    </h2>
-                    <div className="flex flex-wrap gap-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium">Month:</span>
-                        <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
-                          <SelectTrigger className="w-36">
-                            <SelectValue placeholder="Select month" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {months.map(month => (
-                              <SelectItem key={month.value} value={month.value.toString()}>
-                                {month.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium">Year:</span>
-                        <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
-                          <SelectTrigger className="w-28">
-                            <SelectValue placeholder="Select year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {years.map(year => (
-                              <SelectItem key={year.value} value={year.value.toString()}>
-                                {year.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button variant="outline" onClick={exportData}>
-                        <Download className="mr-2 h-4 w-4" /> Export Data
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <Input
-                      placeholder="Search by worker name, staff ID, or location..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="max-w-md"
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.date && "text-muted-foreground"
+                      )}
+                      onClick={() => setIsCalendarOpen(true)}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.date}
+                      onSelect={handleDateChange}
+                      initialFocus
                     />
-                  </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Enter location"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="size_depth">Size/Depth</Label>
+                <Select
+                  value={formData.size_depth}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, size_depth: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select size/depth" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sizeOptions.map((size) => (
+                      <SelectItem key={size} value={size}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="remarks">Remarks</Label>
+                <Textarea
+                  id="remarks"
+                  value={formData.remarks}
+                  onChange={(e) => setFormData(prev => ({ ...prev, remarks: e.target.value }))}
+                  placeholder="Enter any additional remarks"
+                  className="min-h-[100px]"
+                />
+              </div>
+              
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? "Adding Entry..." : "Add Entry"}
+              </Button>
+            </form>
+          </Card>
 
-                  {renderEntriesTable()}
-                </TabsContent>
-                
-                <TabsContent value="worker-details">
-                  <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      Worker Risk Application Details
-                    </h2>
-                    <div className="flex flex-wrap gap-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium">Month:</span>
-                        <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
-                          <SelectTrigger className="w-36">
-                            <SelectValue placeholder="Select month" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {months.map(month => (
-                              <SelectItem key={month.value} value={month.value.toString()}>
-                                {month.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium">Year:</span>
-                        <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
-                          <SelectTrigger className="w-28">
-                            <SelectValue placeholder="Select year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {years.map(year => (
-                              <SelectItem key={year.value} value={year.value.toString()}>
-                                {year.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <Label htmlFor="worker-select">Select Worker</Label>
-                      <Select
-                        value={selectedWorker}
-                        onValueChange={setSelectedWorker}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select worker" />
+          <Card className="p-6 bg-white shadow-sm mt-8">
+            <Tabs defaultValue="all-entries" className="mb-6" onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="all-entries">All Entries</TabsTrigger>
+                <TabsTrigger value="worker-details">Worker Details</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all-entries">
+                <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Risk Management Entries
+                  </h2>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Month:</span>
+                      <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
+                        <SelectTrigger className="w-36">
+                          <SelectValue placeholder="Select month" />
                         </SelectTrigger>
                         <SelectContent>
-                          {workers.map((worker) => (
-                            <SelectItem key={worker.id} value={worker.id}>
-                              {worker.name} ({worker.staff_id})
+                          {months.map(month => (
+                            <SelectItem key={month.value} value={month.value.toString()}>
+                              {month.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    <div className="flex items-end">
-                      <Button 
-                        variant="outline" 
-                        onClick={exportWorkerData}
-                        disabled={!selectedWorker}
-                        className="ml-auto"
-                      >
-                        <FileText className="mr-2 h-4 w-4" /> Export Worker Data
-                      </Button>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Year:</span>
+                      <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+                        <SelectTrigger className="w-28">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {years.map(year => (
+                            <SelectItem key={year.value} value={year.value.toString()}>
+                              {year.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="outline" onClick={exportData}>
+                      <Download className="mr-2 h-4 w-4" /> Export Data
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <Input
+                    placeholder="Search by worker name, staff ID, or location..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-md"
+                  />
+                </div>
+
+                {renderEntriesTable()}
+              </TabsContent>
+              
+              <TabsContent value="worker-details">
+                <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Worker Risk Application Details
+                  </h2>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Month:</span>
+                      <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
+                        <SelectTrigger className="w-36">
+                          <SelectValue placeholder="Select month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {months.map(month => (
+                            <SelectItem key={month.value} value={month.value.toString()}>
+                              {month.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Year:</span>
+                      <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+                        <SelectTrigger className="w-28">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {years.map(year => (
+                            <SelectItem key={year.value} value={year.value.toString()}>
+                              {year.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
+                </div>
 
-                  {renderEntriesTable()}
-                </TabsContent>
-              </Tabs>
-            </Card>
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <Label htmlFor="worker-select">Select Worker</Label>
+                    <Select
+                      value={selectedWorker}
+                      onValueChange={setSelectedWorker}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select worker" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workers.map((worker) => (
+                          <SelectItem key={worker.id} value={worker.id}>
+                            {worker.name} ({worker.staff_id})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <Button 
+                      variant="outline" 
+                      onClick={exportWorkerData}
+                      disabled={!selectedWorker}
+                      className="ml-auto"
+                    >
+                      <FileText className="mr-2 h-4 w-4" /> Export Worker Data
+                    </Button>
+                  </div>
+                </div>
+
+                {renderEntriesTable()}
+              </TabsContent>
+            </Tabs>
+          </Card>
         </div>
       </div>
 
@@ -883,6 +989,37 @@ const RiskManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Risk Entry</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to approve this risk entry?</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsApprovalDialogOpen(false)}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={confirmApproval}>Approve</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Risk Entry</DialogTitle>
+          </DialogHeader>
+          <p>Please provide a reason for rejecting this risk entry:</p>
+          <Textarea
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder="Enter rejection reason"
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsRejectionDialogOpen(false)}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={confirmRejection}>Reject</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ErrorBoundary>
   );
   
@@ -919,32 +1056,64 @@ const RiskManagement = () => {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size/Depth</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₵)</th>
-              {(user?.role === 'Standard' || user?.role === 'RDM') && (
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              {(user?.role && ['Standard', 'District_Head', 'Supervisor', 'RDM', 'Director', 'RCM'].includes(user.role)) && (
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredEntries.map((entry) => (
-              <tr key={entry.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.worker.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(entry.date), "yyyy-MM-dd")}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.location}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.size_depth}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.remarks}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.rate?.toFixed(2) || "10.00"}</td>
-                {(user?.role === 'Standard' || user?.role === 'RDM') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleEditEntry(entry)}>
-                      <Pencil className="w-4 h-4 mr-1" /> Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteEntry(entry.id)}>
-                      <Trash2 className="w-4 h-4 mr-1" /> Delete
-                    </Button>
+            {filteredEntries.map((entry) => {
+              let approveButtonClass = "text-green-600 hover:bg-green-50 hover:text-green-700";
+              if (user?.role === "Supervisor" || user?.role === "RDM") {
+                approveButtonClass = "text-blue-600 hover:bg-blue-50 hover:text-blue-700";
+              } else if (user?.role === "Director" || user?.role === "RCM") {
+                approveButtonClass = "text-amber-600 hover:bg-amber-50 hover:text-amber-700";
+              }
+              return (
+                <tr key={entry.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.worker.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(entry.date), "yyyy-MM-dd")}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.location}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.size_depth}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.remarks}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.rate?.toFixed(2) || "10.00"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {getApprovalBadge(entry.approval_status || "Pending")}
                   </td>
-                )}
-              </tr>
-            ))}
+                  {(user?.role && ['Standard', 'District_Head', 'Supervisor', 'RDM', 'Director', 'RCM'].includes(user.role)) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleEditEntry(entry)}>
+                        <Pencil className="w-4 h-4 mr-1" /> Edit
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteEntry(entry.id)}>
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete
+                      </Button>
+                      {canApprove(entry.approval_status) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleApproveEntry(entry.id)}
+                          className={approveButtonClass}
+                        >
+                          <ThumbsUp className="w-4 h-4 mr-1" /> Approve
+                        </Button>
+                      )}
+                      {canReject(entry.approval_status) && (
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           onClick={() => handleRejectEntry(entry.id)}
+                           className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                         >
+                           <AlertCircle className="w-4 h-4 mr-1" /> Reject
+                         </Button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="bg-gray-50">
