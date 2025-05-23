@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { LogOut, Download, Calendar as CalendarIcon, Home, BarChart, Users, FileText } from "lucide-react";
+import { LogOut, Download, Calendar as CalendarIcon, Home, BarChart, Users, FileText, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { getAndClearNotification } from "@/utils/notifications";
@@ -18,6 +18,7 @@ import { workers as workersApi, risk } from "@/lib/api";
 import { Worker, RiskEntry } from "@/types";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const RiskManagement = () => {
   const navigate = useNavigate();
@@ -39,7 +40,21 @@ const RiskManagement = () => {
     size_depth: "",
     remarks: "",
   });
+  const [editingEntry, setEditingEntry] = useState<RiskEntry | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  // Edit Modal
+  const [editForm, setEditForm] = useState({
+    worker_id: "",
+    date: new Date(),
+    location: "",
+    size_depth: "",
+    remarks: "",
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   // Generate month options
   const months = [
     { value: 1, label: 'January' },
@@ -398,6 +413,82 @@ const RiskManagement = () => {
     return worker ? worker.name : "Unknown Worker";
   };
 
+  const handleEditEntry = (entry: RiskEntry) => {
+    setEditingEntry(entry);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    setDeletingEntryId(entryId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (editingEntry) {
+      setEditForm({
+        worker_id: editingEntry.worker_id,
+        date: new Date(editingEntry.date),
+        location: editingEntry.location,
+        size_depth: editingEntry.size_depth,
+        remarks: editingEntry.remarks || "",
+      });
+    }
+  }, [editingEntry]);
+
+  const handleEditFormChange = (field: string, value: any) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEntry) return;
+    setEditSubmitting(true);
+    try {
+      await risk.update(editingEntry.id, {
+        worker_id: editForm.worker_id,
+        date: format(editForm.date, "yyyy-MM-dd"),
+        location: editForm.location,
+        size_depth: editForm.size_depth,
+        remarks: editForm.remarks,
+      });
+      toast({ title: "Success", description: "Risk entry updated successfully." });
+      setIsEditModalOpen(false);
+      setEditingEntry(null);
+      // Refresh data
+      const data = await risk.getMonthly(selectedMonth, selectedYear);
+      setEntries(data);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update risk entry.", variant: "destructive" });
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false);
+    setEditingEntry(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingEntryId) return;
+    try {
+      await risk.delete(deletingEntryId);
+      toast({ title: "Success", description: "Risk entry deleted successfully." });
+      setIsDeleteDialogOpen(false);
+      setDeletingEntryId(null);
+      // Refresh data
+      const data = await risk.getMonthly(selectedMonth, selectedYear);
+      setEntries(data);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete risk entry.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteDialogClose = () => {
+    setIsDeleteDialogOpen(false);
+    setDeletingEntryId(null);
+  };
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -689,6 +780,109 @@ const RiskManagement = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Risk Entry</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <Label>Worker</Label>
+              <Select
+                value={editForm.worker_id}
+                onValueChange={value => handleEditFormChange("worker_id", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select worker" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workers.map(worker => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.name} ({worker.staff_id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Date</Label>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !editForm.date && "text-muted-foreground"
+                    )}
+                    onClick={() => setIsCalendarOpen(true)}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {editForm.date ? format(editForm.date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={editForm.date}
+                    onSelect={date => handleEditFormChange("date", date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Label>Location</Label>
+              <Input
+                value={editForm.location}
+                onChange={e => handleEditFormChange("location", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Size/Depth</Label>
+              <Select
+                value={editForm.size_depth}
+                onValueChange={value => handleEditFormChange("size_depth", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size/depth" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sizeOptions.map(size => (
+                    <SelectItem key={size} value={size}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Remarks</Label>
+              <Textarea
+                value={editForm.remarks}
+                onChange={e => handleEditFormChange("remarks", e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleEditModalClose}>Cancel</Button>
+              <Button type="submit" disabled={editSubmitting}>{editSubmitting ? "Saving..." : "Save Changes"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Risk Entry</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this risk entry? This action cannot be undone.</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleDeleteDialogClose}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ErrorBoundary>
   );
   
@@ -725,30 +919,30 @@ const RiskManagement = () => {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size/Depth</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₵)</th>
+              {(user?.role === 'Admin' || user?.role === 'District_Head') && (
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredEntries.map((entry) => (
               <tr key={entry.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  <div>{entry.worker.name}</div>
-                  <div className="text-xs text-gray-500">{entry.worker.staff_id} - {entry.worker.grade}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {format(new Date(entry.date), "PP")}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {entry.location}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {entry.size_depth}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 max-w-md break-words">
-                  {entry.remarks || "-"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {entry.rate?.toFixed(2) || "10.00"}
-                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.worker.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(entry.date), "yyyy-MM-dd")}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.location}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.size_depth}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.remarks}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.rate?.toFixed(2) || "10.00"}</td>
+                {(user?.role === 'Admin' || user?.role === 'District_Head') && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleEditEntry(entry)}>
+                      <Pencil className="w-4 h-4 mr-1" /> Edit
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteEntry(entry.id)}>
+                      <Trash2 className="w-4 h-4 mr-1" /> Delete
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
