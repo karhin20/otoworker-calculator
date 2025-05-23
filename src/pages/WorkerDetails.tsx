@@ -47,6 +47,8 @@ const WorkerDetails = () => {
   const [approvalEntryId, setApprovalEntryId] = useState<string | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isConfirmingApproval, setIsConfirmingApproval] = useState(false);
+  const [isApproveAllDialogOpen, setIsApproveAllDialogOpen] = useState(false);
+  const [isApprovingAll, setIsApprovingAll] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -443,7 +445,7 @@ const WorkerDetails = () => {
     }
   };
 
-  // Handle initiating approval process
+  // Handler for initiating approval process
   const handleApproveEntry = (entryId: string) => {
     setApprovalEntryId(entryId);
     setIsApprovalDialogOpen(true);
@@ -521,6 +523,43 @@ const WorkerDetails = () => {
     }
     
     return false; // No other combinations are allowed
+  };
+
+  // Approve all pending entries for the selected worker
+  const handleApproveAllPending = () => {
+    setIsApproveAllDialogOpen(true);
+  };
+
+  const confirmApproveAllPending = async () => {
+    if (!selectedWorker) return;
+    setIsApprovingAll(true);
+    try {
+      // Get user info for tracking who approved
+      const userInfo = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")!) : null;
+      const userName = userInfo?.name || "Unknown User";
+      // Find all pending entries
+      const pendingEntries = details.filter((d) => (d as any).approval_status === "Pending");
+      // Approve all pending entries in parallel
+      await Promise.all(
+        pendingEntries.map((entry) =>
+          overtime.approve(entry.id, "Standard", userName)
+        )
+      );
+      toast({
+        title: "Success",
+        description: `All pending entries have been approved as Standard (District Head).`,
+      });
+      setIsApproveAllDialogOpen(false);
+      fetchDetails();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve all entries.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsApprovingAll(false);
+    }
   };
 
   return (
@@ -923,6 +962,20 @@ const WorkerDetails = () => {
                 <div className="mt-4 text-xs text-gray-500">
                   <p>Keyboard shortcuts: Left arrow (previous page), Right arrow (next page)</p>
                 </div>
+                <div className="mt-8 flex gap-4 items-center">
+                  {/* Approve All Button for Standard/District_Head */}
+                  {(userRole === "Standard" || userRole === "District_Head") && (
+                    <Button
+                      variant="standard"
+                      onClick={handleApproveAllPending}
+                      disabled={!selectedWorker || details.filter((d) => (d as any).approval_status === "Pending").length === 0}
+                      className="gap-1"
+                    >
+                      <ThumbsUp className="h-5 w-5" /> Approve All Pending
+                    </Button>
+                  )}
+                  {/* ...existing export buttons and other controls... */}
+                </div>
               </>
             ) : (
               <p className="text-center text-gray-500 py-8">
@@ -999,6 +1052,24 @@ const WorkerDetails = () => {
               disabled={isConfirmingApproval}
             >
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve All Confirmation Dialog */}
+      <Dialog open={isApproveAllDialogOpen} onOpenChange={setIsApproveAllDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve All Pending Entries</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve all pending entries for this worker? This will change all 'Pending' entries to 'Standard' (District Head) status.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveAllDialogOpen(false)} disabled={isApprovingAll}>Cancel</Button>
+            <Button onClick={confirmApproveAllPending} disabled={isApprovingAll} variant="standard">
+              {isApprovingAll ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</>) : "Approve All"}
             </Button>
           </DialogFooter>
         </DialogContent>

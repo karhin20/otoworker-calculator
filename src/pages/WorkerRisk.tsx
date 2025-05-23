@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, Shield, LogOut, Plus, X, AlignLeft, MapPin, AlertCircle, Users, Pencil, Trash2 } from "lucide-react";
+import { Clock, Calendar, Shield, LogOut, Plus, X, AlignLeft, MapPin, AlertCircle, Users } from "lucide-react";
 import { format } from "date-fns";
 import { workers, risk } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
