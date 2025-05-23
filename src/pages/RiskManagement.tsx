@@ -657,79 +657,83 @@ const RiskManagement = () => {
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="worker">Worker</Label>
-                <Select
-                  value={formData.worker_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, worker_id: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select worker" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workers.map((worker) => (
-                      <SelectItem key={worker.id} value={worker.id}>
-                        {worker.name} ({worker.staff_id})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label htmlFor="worker">Worker</Label>
+                  <Select
+                    value={formData.worker_id}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, worker_id: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select worker" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workers.map((worker) => (
+                        <SelectItem key={worker.id} value={worker.id}>
+                          {worker.name} ({worker.staff_id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formData.date && "text-muted-foreground"
+                        )}
+                        onClick={() => setIsCalendarOpen(true)}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.date}
+                        onSelect={handleDateChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.date && "text-muted-foreground"
-                      )}
-                      onClick={() => setIsCalendarOpen(true)}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.date}
-                      onSelect={handleDateChange}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Enter location"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="size_depth">Size/Depth</Label>
-                <Select
-                  value={formData.size_depth}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, size_depth: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select size/depth" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sizeOptions.map((size) => (
-                      <SelectItem key={size} value={size}>
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Enter location"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="size_depth">Size/Depth</Label>
+                  <Select
+                    value={formData.size_depth}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, size_depth: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select size/depth" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sizeOptions.map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div className="space-y-2">

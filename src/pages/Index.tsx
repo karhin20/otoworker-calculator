@@ -239,11 +239,12 @@ const Index = () => {
           </div>
 
           <Card className="p-4 bg-white shadow-sm">
-            <nav className="flex space-x-4">
+            <nav className="flex flex-wrap gap-2">
               {(!user?.role || user.role === "Standard") && (
                 <Button
                   variant="ghost"
                   onClick={() => navigate("/add-worker")}
+                  className="flex-1 sm:flex-none"
                 >
                   <Plus className="mr-2 h-4 w-4" /> Add Worker
                 </Button>
@@ -251,24 +252,28 @@ const Index = () => {
               <Button
                 variant="ghost"
                 onClick={() => navigate("/monthly-summary")}
+                className="flex-1 sm:flex-none"
               >
                 <Calendar className="mr-2 h-4 w-4" /> Monthly Summary
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => navigate("/worker-details")}
+                className="flex-1 sm:flex-none"
               >
                 <Users className="mr-2 h-4 w-4" /> Staff Details
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => navigate("/analytics")}
+                className="flex-1 sm:flex-none"
               >
                 <BarChart className="mr-2 h-4 w-4" /> Analytics
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => navigate("/risk-management")}
+                className="flex-1 sm:flex-none"
               >
                 <Shield className="mr-2 h-4 w-4" /> Risk Application
               </Button>
@@ -276,6 +281,7 @@ const Index = () => {
                 <Button
                   variant="ghost"
                   onClick={() => navigate("/worker-pin-setup")}
+                  className="flex-1 sm:flex-none"
                 >
                   <Shield className="mr-2 h-4 w-4" /> Worker PIN Setup
                 </Button>
