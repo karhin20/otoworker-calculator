@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Home, Calendar, ChevronLeft, ChevronRight, Search, Download, CheckCircle2, XCircle, BarChart } from "lucide-react";
+import { LogOut, Home, Calendar, ChevronLeft, ChevronRight, Search, Download, CheckCircle2, XCircle, BarChart, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { workers as workersApi, risk } from "@/lib/api";
 import { Worker, RiskEntry } from "@/types";
@@ -39,6 +39,16 @@ const SupervisorRiskManagement = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<RiskEntry | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    location: "",
+    size_depth: "",
+    remarks: "",
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -258,6 +268,75 @@ const SupervisorRiskManagement = () => {
     }
   };
 
+  const handleEditEntry = (entry: RiskEntry) => {
+    setEditingEntry(entry);
+    setEditForm({
+      location: entry.location,
+      size_depth: entry.size_depth,
+      remarks: entry.remarks || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    setDeletingEntryId(entryId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleEditFormChange = (field: string, value: any) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEntry) return;
+    setEditSubmitting(true);
+    try {
+      await risk.update(editingEntry.id, {
+        location: editForm.location,
+        size_depth: editForm.size_depth,
+        remarks: editForm.remarks,
+      });
+      toast({ title: "Success", description: "Risk entry updated successfully." });
+      setIsEditModalOpen(false);
+      setEditingEntry(null);
+      // Refresh data
+      const data = await risk.getMonthly(selectedMonth, selectedYear);
+      const sortedData = data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRiskEntries(sortedData);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update risk entry.", variant: "destructive" });
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false);
+    setEditingEntry(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingEntryId) return;
+    try {
+      await risk.delete(deletingEntryId);
+      toast({ title: "Success", description: "Risk entry deleted successfully." });
+      setIsDeleteDialogOpen(false);
+      setDeletingEntryId(null);
+      // Refresh data
+      const data = await risk.getMonthly(selectedMonth, selectedYear);
+      const sortedData = data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRiskEntries(sortedData);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete risk entry.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteDialogClose = () => {
+    setIsDeleteDialogOpen(false);
+    setDeletingEntryId(null);
+  };
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -441,14 +520,24 @@ const SupervisorRiskManagement = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               ₵{entry.rate.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleViewEntry(entry)}
-                              >
-                                View Details
-                              </Button>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex gap-2">
+                  {(user?.role === 'Supervisor' || user?.role === 'RDM' || user?.role === 'Accountant' || user?.role === 'Director' || user?.role === 'District_Head') && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleEditEntry(entry)}>
+                        <Pencil className="w-4 h-4 mr-1" /> Edit
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteEntry(entry.id)}>
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewEntry(entry)}
+                  >
+                    View Details
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -655,6 +744,65 @@ const SupervisorRiskManagement = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Risk Entry</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <Label>Location</Label>
+              <Input
+                value={editForm.location}
+                onChange={e => handleEditFormChange("location", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Size/Depth</Label>
+              <Select
+                value={editForm.size_depth}
+                onValueChange={value => handleEditFormChange("size_depth", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size/depth" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["4\"", "5\"", "6\"", "8\""].map(size => (
+                    <SelectItem key={size} value={size}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Remarks</Label>
+              <Input
+                value={editForm.remarks}
+                onChange={e => handleEditFormChange("remarks", e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleEditModalClose}>Cancel</Button>
+              <Button type="submit" disabled={editSubmitting}>{editSubmitting ? "Saving..." : "Save Changes"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Risk Entry</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this risk entry? This action cannot be undone.</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleDeleteDialogClose}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ErrorBoundary>
   );
 };

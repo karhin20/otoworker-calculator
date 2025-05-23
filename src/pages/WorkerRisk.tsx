@@ -40,9 +40,6 @@ const WorkerRisk = () => {
     size_depth: sizeOptions[0],
     remarks: "",
   });
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Generate month options
   const months = [
@@ -167,31 +164,19 @@ const WorkerRisk = () => {
   // Handle form submission (Create or Update)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!workerId && !isEditMode) return; // Need workerId for create
-    if (!formData.id && isEditMode) return; // Need entry id for update
+    if (!workerId) return; // Need workerId for create
 
     setSubmitting(true);
     try {
-      if (isEditMode && formData.id) {
-        // Update existing entry
-        await risk.update(formData.id, {
-          location: formData.location,
-          size_depth: formData.size_depth,
-          remarks: formData.remarks,
-          // Potentially add rate update logic based on role if needed
-        });
-        toast({ title: "Success", description: "Risk entry updated successfully" });
-      } else {
-        // Create new entry
-        await risk.create({
-          worker_id: workerId!, // Assert workerId is not null here
-          date: format(formData.date, "yyyy-MM-dd"),
-          location: formData.location,
-          size_depth: formData.size_depth,
-          remarks: formData.remarks
-        });
-        toast({ title: "Success", description: "Risk entry added successfully" });
-      }
+      // Create new entry
+      await risk.create({
+        worker_id: workerId!, // Assert workerId is not null here
+        date: format(formData.date, "yyyy-MM-dd"),
+        location: formData.location,
+        size_depth: formData.size_depth,
+        remarks: formData.remarks
+      });
+      toast({ title: "Success", description: "Risk entry added successfully" });
 
       // Reset form and refresh data
       resetFormAndCloseDialog();
@@ -200,7 +185,7 @@ const WorkerRisk = () => {
       console.error("Failed to save risk entry:", error);
       toast({
         title: "Error",
-        description: `Failed to ${isEditMode ? 'update' : 'add'} risk entry. Please try again.`, 
+        description: "Failed to add risk entry. Please try again.", 
         variant: "destructive",
       });
     } finally {
@@ -217,50 +202,7 @@ const WorkerRisk = () => {
       size_depth: sizeOptions[0],
       remarks: "",
     });
-    setIsEditMode(false);
     setIsDialogOpen(false);
-  };
-
-  // Open dialog for editing
-  const handleEditEntry = (entry: RiskEntry) => {
-    setFormData({
-      id: entry.id,
-      date: new Date(entry.date), // Ensure date is a Date object
-      location: entry.location,
-      size_depth: entry.size_depth,
-      remarks: entry.remarks || "",
-    });
-    setIsEditMode(true);
-    setIsDialogOpen(true);
-  };
-
-  // Open delete confirmation
-  const handleDeleteEntry = (entryId: string) => {
-    setDeletingEntryId(entryId);
-    setIsDeleteDialogOpen(true);
-  };
-
-  // Confirm deletion
-  const confirmDeleteEntry = async () => {
-    if (!deletingEntryId) return;
-    try {
-      await risk.delete(deletingEntryId);
-      toast({ title: "Success", description: "Risk entry deleted successfully." });
-      setIsDeleteDialogOpen(false);
-      setDeletingEntryId(null);
-      fetchRiskEntries();
-    } catch (error) {
-      console.error("Failed to delete risk entry:", error);
-      toast({ title: "Error", description: "Failed to delete risk entry.", variant: "destructive" });
-    }
-  };
-
-  // Check permissions
-  const canModify = (entry: RiskEntry): boolean => {
-    const isAdmin = user?.role && ["Supervisor", "Accountant", "Director"].includes(user.role);
-    // Use assertion for created_by
-    const isCreator = (entry as any).created_by === (user as any)?.id;
-    return isAdmin || isCreator;
   };
 
   // Handle sign out
@@ -407,27 +349,6 @@ const WorkerRisk = () => {
                             Added on {format(new Date(entry.created_at), "MMM d, yyyy")}
                           </div>
                         </div>
-                        {/* Action Buttons */}
-                        <div className="flex gap-2 items-center mt-2 sm:mt-0">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleEditEntry(entry)}
-                            disabled={!canModify(entry)} // Disable if user cannot modify
-                            className={canModify(entry) ? "text-blue-600 hover:bg-blue-50" : "text-gray-400 cursor-not-allowed"}
-                          >
-                             <Pencil className="h-4 w-4" />
-                           </Button>
-                           <Button 
-                             variant="ghost" 
-                             size="sm" 
-                             onClick={() => handleDeleteEntry(entry.id)}
-                             disabled={!canModify(entry)} // Disable if user cannot modify
-                             className={canModify(entry) ? "text-red-600 hover:bg-red-50" : "text-gray-400 cursor-not-allowed"}
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                         </div>
                       </div>
                     </Card>
                   ))}
@@ -505,9 +426,9 @@ const WorkerRisk = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
-            <DialogTitle>{isEditMode ? "Edit Risk Entry" : "Add New Risk Entry"}</DialogTitle>
+            <DialogTitle>Add New Risk Entry</DialogTitle>
             <DialogDescription>
-              {isEditMode ? "Update the details of the risk activity." : "Enter the details of your risk activity. Fields marked with * are required."}
+              Enter the details of your risk activity. Fields marked with * are required.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -586,26 +507,10 @@ const WorkerRisk = () => {
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update Entry" : "Submit Entry")}
+                {submitting ? "Submitting..." : "Submit Entry"}
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this risk entry? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteEntry}>Delete</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
