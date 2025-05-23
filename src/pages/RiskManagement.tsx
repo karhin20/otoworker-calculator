@@ -445,8 +445,6 @@ const RiskManagement = () => {
     setEditSubmitting(true);
     try {
       await risk.update(editingEntry.id, {
-        worker_id: editForm.worker_id,
-        date: format(editForm.date, "yyyy-MM-dd"),
         location: editForm.location,
         size_depth: editForm.size_depth,
         remarks: editForm.remarks,
